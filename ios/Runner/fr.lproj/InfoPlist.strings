@@ -1,0 +1,4 @@
+NSCameraUsageDescription = "Nous avons besoin de votre appareil photo pour les profils photo et les images de voiture";
+NSPhotoLibraryUsageDescription = "Nous avons besoin d'accéder aux photos de votre profil et aux images de votre voiture";
+NSLocationWhenInUseUsageDescription = "Nous avons besoin de votre localisation pour vous alerter des pas activés par KNEX";
+PermissionGroupNotification = "Nous devons vous avertir lorsque vous vous trouvez dans un endroit où Knex est anéanti.";

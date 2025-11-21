@@ -1,0 +1,114 @@
+{
+  "project_info": {
+    "project_number": "1045566810040",
+    "project_id": "knex-client24",
+    "storage_bucket": "knex-client24.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1045566810040:android:e122d66a3854838628514d",
+        "android_client_info": {
+          "package_name": "co.lordalexand.knex"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1045566810040-m6ah0hdve0d14n7ar3moma1n2k968j0l.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "co.lordalexand.knex",
+            "certificate_hash": "9bbb3186b2189ef16d8f272bdab59362c395cbb4"
+          }
+        },
+        {
+          "client_id": "1045566810040-l4i91m475d6ph2etjkh9d6c95etnjj95.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAOvqV-PPTzZTGvJq8ZBJn1QNmJdFg4Wa4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1045566810040-l4i91m475d6ph2etjkh9d6c95etnjj95.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1045566810040-42bn2a5mf2rlvf6spoq5n48dl740t0p8.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.knexatt24v"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1045566810040:android:20463920f7d108b228514d",
+        "android_client_info": {
+          "package_name": "co.lordalexand.knexattendant"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1045566810040-0572c7hfhj1pff7q55oj4dubde8m99tf.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "co.lordalexand.knexattendant",
+            "certificate_hash": "3e4eef8e17e61f0c0b4a90364a2f3fa4a3caa781"
+          }
+        },
+        {
+          "client_id": "1045566810040-2eo4fn6u39uinm47l48iarisri78nio6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "co.lordalexand.knexattendant",
+            "certificate_hash": "9bbb3186b2189ef16d8f272bdab59362c395cbb4"
+          }
+        },
+        {
+          "client_id": "1045566810040-hdv4ti877s4luikr284ukn6m68o8k0qg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "co.lordalexand.knexattendant",
+            "certificate_hash": "f6ac7d39b0f846b2252a9108d39044e67c74f4f8"
+          }
+        },
+        {
+          "client_id": "1045566810040-l4i91m475d6ph2etjkh9d6c95etnjj95.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAOvqV-PPTzZTGvJq8ZBJn1QNmJdFg4Wa4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1045566810040-l4i91m475d6ph2etjkh9d6c95etnjj95.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1045566810040-42bn2a5mf2rlvf6spoq5n48dl740t0p8.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.knexatt24v"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

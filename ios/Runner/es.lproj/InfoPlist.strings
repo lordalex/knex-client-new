@@ -1,0 +1,4 @@
+NSCameraUsageDescription = "Necesitamos tu cámara para fotos de perfiles e imágenes de coches.";
+NSPhotoLibraryUsageDescription = "Necesitamos acceso a fotos de tu perfil e imágenes de tu auto.";
+NSLocationWhenInUseUsageDescription = "Necesitamos tu ubicación para avisarte de los espacios habilitados para KNEX";
+PermissionGroupNotification = "Necesitamos notificarte cuando estés en una ubicación anexada a Knex";
