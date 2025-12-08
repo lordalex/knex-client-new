@@ -7,6 +7,7 @@ import '/custom_code/actions/index.dart' as actions;
 import '/flutter_flow/custom_functions.dart' as functions;
 import '/flutter_flow/random_data_util.dart' as random_data;
 import '/index.dart';
+import '/components/error_state_widget.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 import 'package:ff_theme/flutter_flow/flutter_flow_theme.dart';
@@ -44,130 +45,7 @@ class _HomePageWidgetState extends State<HomePageWidget>
 
     // On page load action.
     SchedulerBinding.instance.addPostFrameCallback((_) async {
-      await Future.wait([
-        Future(() async {
-          unawaited(
-            () async {
-              await actions.lockOrientation();
-            }(),
-          );
-          _model.responseR = await actions.sendjsontourl(
-            '{\"searchCriteria\": {\"email\":  \"${currentUserEmail}\"}}',
-            currentJwtToken,
-            FFAppConstants.searchUserURL,
-          );
-          if (_model.responseR == '401') {
-            context.pushNamedAuth(LoginSignUpWidget.routeName, context.mounted);
-
-            GoRouter.of(context).prepareAuthEvent();
-            await authManager.signOut();
-            GoRouter.of(context).clearRedirectLocation();
-
-            return;
-          }
-          _model.response = functions.getelementsfromjson(_model.responseR!);
-          safeSetState(() {});
-          if (!((functions.getkeyfromjsonstring(
-                          _model.responseR!, 'firstname') !=
-                      '') &&
-              (functions.getkeyfromjsonstring(
-                          _model.responseR!, 'lastname') !=
-                      '') &&
-              (functions.getkeyfromjsonstring(_model.responseR!, 'phone') !=
-                      '') &&
-              (functions.getkeyfromjsonstring(
-                          _model.responseR!, 'address') !=
-                      ''))) {
-            context.pushNamedAuth(
-                ProfileCreateWidget.routeName, context.mounted);
-
-            return;
-          }
-          _model.responseP = await actions.sendjsontourl(
-            '{\"searchCriteria\": {\"email\":  \"${currentUserEmail}\"}}',
-            currentJwtToken,
-            FFAppConstants.getPINURL,
-          );
-          if (_model.responseP == '401') {
-            context.pushNamedAuth(LoginSignUpWidget.routeName, context.mounted);
-
-            GoRouter.of(context).prepareAuthEvent();
-            await authManager.signOut();
-            GoRouter.of(context).clearRedirectLocation();
-
-            return;
-          }
-          _model.pin = functions.getelementsfromjson(_model.responseP!);
-          safeSetState(() {});
-          _model.pint = functions.getkeyfromjsonstring(_model.pin, 'PIN');
-          safeSetState(() {});
-          _model.responseQ = await actions.sendjsontourl(
-            '{    \"modelName\": \"Site\",    \"searchCriteria\": {}  }',
-            currentJwtToken,
-            FFAppConstants.searchURL,
-          );
-          if (_model.responseQ == '401') {
-            context.pushNamedAuth(LoginSignUpWidget.routeName, context.mounted);
-
-            GoRouter.of(context).prepareAuthEvent();
-            await authManager.signOut();
-            GoRouter.of(context).clearRedirectLocation();
-
-            return;
-          }
-          _model.sites =
-              functions.jsontoarray(_model.responseQ!).toList().cast<String>();
-          safeSetState(() {});
-          _model.sitesWithDistance = await actions.sortstringarraybyargs(
-            _model.sites.toList(),
-            'coordinates_latitude',
-            'coordinates_longitude',
-            'distance',
-            FFAppState().distanceUnit,
-            FFAppState().sorAscending,
-            4,
-            FFAppState().sortBy,
-          );
-          _model.latestTicketDataFrom = await actions.sendjsontourl(
-            '{\"userclient\": \"${currentUserEmail}\"}',
-            currentJwtToken,
-            FFAppConstants.latesticketURL,
-          );
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                '',
-                style: TextStyle(
-                  color: FlutterFlowTheme.of(context).primaryText,
-                ),
-              ),
-              duration: Duration(milliseconds: 4000),
-              backgroundColor: FlutterFlowTheme.of(context).secondary,
-            ),
-          );
-          if (!((_model.latestTicketDataFrom ==
-                  '{\"error\":\"Request failed with status code 400\"}') ||
-              (_model.latestTicketDataFrom == '400'))) {
-            if (functions.tostr(functions.getkeyfromjsonstring(
-                    _model.latestTicketDataFrom!, 'status')) !=
-                'Cancelled') {
-              if (functions.tostr(functions.getkeyfromjsonstring(
-                      _model.latestTicketDataFrom!, 'status')) !=
-                  'Completed') {
-                context.pushNamedAuth(TicketWidget.routeName, context.mounted);
-
-                return;
-              }
-            }
-          }
-        }),
-      ]);
-      _model.locationL = await actions.location();
-      _model.location = _model.locationL!;
-      _model.isLoaded = true;
-      safeSetState(() {});
-
-      FFAppState().update(() {});
+      await _loadPageData();
     });
 
     animationsMap.addAll({
@@ -283,6 +161,165 @@ class _HomePageWidgetState extends State<HomePageWidget>
     WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
+  /// Loads all page data with elegant error handling
+  Future<void> _loadPageData() async {
+    try {
+      // Reset error state
+      _model.hasError = false;
+      _model.errorMessage = null;
+
+      await Future.wait([
+        Future(() async {
+          unawaited(
+            () async {
+              await actions.lockOrientation();
+            }(),
+          );
+
+          // Search user API call
+          _model.responseR = await actions.sendjsontourl(
+            '{\"searchCriteria\": {\"email\":  \"${currentUserEmail}\"}}',
+            currentJwtToken,
+            FFAppConstants.searchUserURL,
+          );
+
+          // Check for auth errors
+          if (_model.responseR == '401') {
+            context.pushNamedAuth(LoginSignUpWidget.routeName, context.mounted);
+            GoRouter.of(context).prepareAuthEvent();
+            await authManager.signOut();
+            GoRouter.of(context).clearRedirectLocation();
+            return;
+          }
+
+          // Check for server errors (500, 502, etc.)
+          final statusCode = int.tryParse(_model.responseR ?? '');
+          if (statusCode != null && statusCode >= 400) {
+            throw Exception(_getErrorMessage(statusCode));
+          }
+
+          _model.response = functions.getelementsfromjson(_model.responseR!);
+          safeSetState(() {});
+
+          // Check if profile is complete
+          if (!((functions.getkeyfromjsonstring(_model.responseR!, 'firstname') != '') &&
+              (functions.getkeyfromjsonstring(_model.responseR!, 'lastname') != '') &&
+              (functions.getkeyfromjsonstring(_model.responseR!, 'phone') != '') &&
+              (functions.getkeyfromjsonstring(_model.responseR!, 'address') != ''))) {
+            context.pushNamedAuth(ProfileCreateWidget.routeName, context.mounted);
+            return;
+          }
+
+          // Get PIN API call
+          _model.responseP = await actions.sendjsontourl(
+            '{\"searchCriteria\": {\"email\":  \"${currentUserEmail}\"}}',
+            currentJwtToken,
+            FFAppConstants.getPINURL,
+          );
+
+          if (_model.responseP == '401') {
+            context.pushNamedAuth(LoginSignUpWidget.routeName, context.mounted);
+            GoRouter.of(context).prepareAuthEvent();
+            await authManager.signOut();
+            GoRouter.of(context).clearRedirectLocation();
+            return;
+          }
+
+          _model.pin = functions.getelementsfromjson(_model.responseP!);
+          safeSetState(() {});
+          _model.pint = functions.getkeyfromjsonstring(_model.pin, 'PIN');
+          safeSetState(() {});
+
+          // Search sites API call
+          _model.responseQ = await actions.sendjsontourl(
+            '{    \"modelName\": \"Site\",    \"searchCriteria\": {}  }',
+            currentJwtToken,
+            FFAppConstants.searchURL,
+          );
+
+          if (_model.responseQ == '401') {
+            context.pushNamedAuth(LoginSignUpWidget.routeName, context.mounted);
+            GoRouter.of(context).prepareAuthEvent();
+            await authManager.signOut();
+            GoRouter.of(context).clearRedirectLocation();
+            return;
+          }
+
+          _model.sites = functions.jsontoarray(_model.responseQ!).toList().cast<String>();
+          safeSetState(() {});
+
+          _model.sitesWithDistance = await actions.sortstringarraybyargs(
+            _model.sites.toList(),
+            'coordinates_latitude',
+            'coordinates_longitude',
+            'distance',
+            FFAppState().distanceUnit,
+            FFAppState().sorAscending,
+            4,
+            FFAppState().sortBy,
+          );
+
+          // Get latest ticket
+          _model.latestTicketDataFrom = await actions.sendjsontourl(
+            '{\"userclient\": \"${currentUserEmail}\"}',
+            currentJwtToken,
+            FFAppConstants.latesticketURL,
+          );
+
+          if (!((_model.latestTicketDataFrom ==
+                  '{\"error\":\"Request failed with status code 400\"}') ||
+              (_model.latestTicketDataFrom == '400'))) {
+            if (functions.tostr(functions.getkeyfromjsonstring(
+                    _model.latestTicketDataFrom!, 'status')) !=
+                'Cancelled') {
+              if (functions.tostr(functions.getkeyfromjsonstring(
+                      _model.latestTicketDataFrom!, 'status')) !=
+                  'Completed') {
+                context.pushNamedAuth(TicketWidget.routeName, context.mounted);
+                return;
+              }
+            }
+          }
+        }),
+      ]);
+
+      _model.locationL = await actions.location();
+      _model.location = _model.locationL!;
+      _model.isLoaded = true;
+      safeSetState(() {});
+
+      FFAppState().update(() {});
+    } catch (e) {
+      // Handle errors gracefully
+      _model.hasError = true;
+      _model.errorMessage = e.toString().replaceAll('Exception: ', '');
+      _model.isLoaded = true;
+      safeSetState(() {});
+    }
+  }
+
+  /// Returns a user-friendly error message based on status code
+  String _getErrorMessage(int statusCode) {
+    switch (statusCode) {
+      case 400:
+        return 'Invalid request. Please try again.';
+      case 401:
+        return 'Session expired. Please log in again.';
+      case 403:
+        return 'You don\'t have permission for this action.';
+      case 404:
+        return 'The requested resource was not found.';
+      case 500:
+        return 'Our servers are having issues. Please try again later.';
+      case 502:
+      case 503:
+      case 504:
+        return 'Service temporarily unavailable. Please try again.';
+      default:
+        return 'Something went wrong. Please try again.';
+    }
+  }
+
   @override
   void dispose() {
     _model.dispose();
@@ -333,7 +370,29 @@ class _HomePageWidgetState extends State<HomePageWidget>
             : null,
         body: Stack(
           children: [
-            if (_model.isLoaded == true)
+            // Error state - show elegant error UI
+            if (_model.isLoaded == true && _model.hasError == true)
+              ErrorStateWidget(
+                title: 'Oops!',
+                message: _model.errorMessage ?? 'Something went wrong. Please try again.',
+                icon: Icons.cloud_off_rounded,
+                onRetry: () async {
+                  _model.isLoaded = false;
+                  _model.hasError = false;
+                  safeSetState(() {});
+                  await _loadPageData();
+                },
+                retryButtonText: 'Try Again',
+                onSecondaryAction: () async {
+                  GoRouter.of(context).prepareAuthEvent();
+                  await authManager.signOut();
+                  GoRouter.of(context).clearRedirectLocation();
+                  context.goNamedAuth(LoginSignUpWidget.routeName, context.mounted);
+                },
+                secondaryActionText: 'Sign Out',
+              ),
+            // Normal content - only show when loaded without errors
+            if (_model.isLoaded == true && _model.hasError == false)
               SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.max,

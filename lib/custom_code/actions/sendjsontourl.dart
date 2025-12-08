@@ -131,26 +131,62 @@ Future<String> sendjsontourl(
       return response.body;
     }
   } else {
-    String errorMessage =
-        'Request failed with status: ${response.statusCode}';
-    switch (response.statusCode) {
-      case 400:
-        errorMessage = 'Bad request: Invalid data format';
-        break;
-      case 401:
-        errorMessage = 'Unauthorized: Invalid token';
-        break;
-      case 403:
-        errorMessage = 'Forbidden: Insufficient permissions';
-        break;
-      case 404:
-        errorMessage = 'API endpoint not found';
-        break;
-      case 500:
-        errorMessage = 'Server error occurred';
-        break;
+    // Return error code as string instead of throwing - allows graceful handling
+    log(LogLevel.ERROR,
+        'API Error: Status ${response.statusCode}. Response: ${response.body}');
+    return response.statusCode.toString();
+  }
+}
+
+/// Wrapper for sendjsontourl with elegant error handling
+/// Returns a record with (success, data, errorMessage)
+Future<({bool success, String? data, String? errorMessage})> sendjsontourlSafe(
+    String jsonString, String token, String baseUrl) async {
+  try {
+    final result = await sendjsontourl(jsonString, token, baseUrl);
+
+    // Check if result is an error code
+    final statusCode = int.tryParse(result);
+    if (statusCode != null && statusCode >= 400) {
+      String errorMessage;
+      switch (statusCode) {
+        case 400:
+          errorMessage = 'Invalid request. Please check your data.';
+          break;
+        case 401:
+          errorMessage = 'Session expired. Please log in again.';
+          break;
+        case 403:
+          errorMessage = 'You don\'t have permission for this action.';
+          break;
+        case 404:
+          errorMessage = 'The requested resource was not found.';
+          break;
+        case 500:
+          errorMessage =
+              'Our servers are having issues. Please try again later.';
+          break;
+        case 502:
+        case 503:
+        case 504:
+          errorMessage = 'Service temporarily unavailable. Please try again.';
+          break;
+        default:
+          errorMessage = 'Something went wrong. Please try again.';
+      }
+      return (success: false, data: null, errorMessage: errorMessage);
     }
-    log(LogLevel.ERROR, 'API Error: $errorMessage. Response: ${response.body}');
-    throw Exception(errorMessage);
+
+    return (success: true, data: result, errorMessage: null);
+  } catch (e) {
+    log(LogLevel.ERROR, 'sendjsontourlSafe caught exception: $e');
+    String errorMessage = 'Connection error. Please check your internet.';
+    if (e.toString().contains('timed out')) {
+      errorMessage = 'Request timed out. Please try again.';
+    } else if (e.toString().contains('SocketException') ||
+        e.toString().contains('NetworkException')) {
+      errorMessage = 'No internet connection. Please check your network.';
+    }
+    return (success: false, data: null, errorMessage: errorMessage);
   }
 }

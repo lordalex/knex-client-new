@@ -30,6 +30,10 @@ class HomePageModel extends FlutterFlowModel<HomePageWidget> {
 
   bool isLoaded = false;
 
+  /// Error state fields
+  bool hasError = false;
+  String? errorMessage;
+
   ///  State fields for stateful widgets in this page.
 
   // Stores action output result for [Custom Action - sendjsontourl] action in HomePage widget.
