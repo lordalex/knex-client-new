@@ -11,6 +11,7 @@ import 'package:video_player/video_player.dart';
 import '../auth/firebase_auth/auth_util.dart';
 import 'package:ff_theme/flutter_flow/flutter_flow_theme.dart';
 import 'flutter_flow_util.dart';
+import '/utils/florida_messages.dart';
 import 'package:ff_commons/flutter_flow/upload_data_class.dart';
 export 'package:ff_commons/flutter_flow/upload_data_class.dart';
 
@@ -206,7 +207,7 @@ bool validateFileFormat(String filePath, BuildContext context) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(
-      content: Text('Invalid file format: ${mime(filePath)}'),
+      content: Text(FloridaMessages.invalidFileFormat(context, mime(filePath))),
     ));
   return false;
 }

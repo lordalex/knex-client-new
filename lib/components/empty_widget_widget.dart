@@ -1,4 +1,5 @@
 import '/flutter_flow/flutter_flow_util.dart';
+import '/utils/florida_messages.dart';
 import 'package:ff_theme/flutter_flow/flutter_flow_theme.dart';
 import 'package:flutter/material.dart';
 import 'empty_widget_model.dart';
@@ -55,9 +56,7 @@ class _EmptyWidgetWidgetState extends State<EmptyWidgetWidget> {
               ),
             ),
             Text(
-              FFLocalizations.of(context).getText(
-                'o268r0yh' /* No favorite sites saved yet */,
-              ),
+              FloridaMessages.noFavoritesYet(context),
               textAlign: TextAlign.center,
               style: FlutterFlowTheme.of(context).bodyMedium.override(
                     fontFamily: FlutterFlowTheme.of(context).bodyMediumFamily,

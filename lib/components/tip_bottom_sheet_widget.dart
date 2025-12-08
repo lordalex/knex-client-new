@@ -4,6 +4,7 @@ import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/custom_code/actions/index.dart' as actions;
 import '/flutter_flow/custom_functions.dart' as functions;
+import '/utils/florida_messages.dart';
 import 'package:easy_debounce/easy_debounce.dart';
 import 'package:ff_theme/flutter_flow/flutter_flow_theme.dart';
 import 'package:flutter/material.dart';
@@ -637,12 +638,12 @@ class _TipBottomSheetWidgetState extends State<TipBottomSheetWidget> {
                               context: context,
                               builder: (alertDialogContext) {
                                 return AlertDialog(
-                                  content: Text('Custom tip cannot be empty'),
+                                  content: Text(FloridaMessages.tipEmpty(context)),
                                   actions: [
                                     TextButton(
                                       onPressed: () =>
                                           Navigator.pop(alertDialogContext),
-                                      child: Text('Ok'),
+                                      child: Text(FloridaMessages.okButton(context)),
                                     ),
                                   ],
                                 );
@@ -656,7 +657,7 @@ class _TipBottomSheetWidgetState extends State<TipBottomSheetWidget> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              'Select a valid option',
+                              FloridaMessages.selectValidOption(context),
                               style: TextStyle(
                                 color: FlutterFlowTheme.of(context)
                                     .primaryBackground,
@@ -686,7 +687,7 @@ class _TipBottomSheetWidgetState extends State<TipBottomSheetWidget> {
                           paymentResponse.errorMessage != null) {
                         showSnackbar(
                           context,
-                          'Error: ${paymentResponse.errorMessage}',
+                          FloridaMessages.paymentError(context, paymentResponse.errorMessage),
                         );
                       }
                       _model.paymentId = paymentResponse.paymentId ?? '';

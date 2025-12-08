@@ -8,6 +8,7 @@ import '/flutter_flow/upload_data.dart';
 import '/custom_code/actions/index.dart' as actions;
 import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
+import '/utils/florida_messages.dart';
 import 'package:easy_debounce/easy_debounce.dart';
 import 'package:ff_theme/flutter_flow/flutter_flow_theme.dart';
 import 'package:flutter/material.dart';
@@ -1268,7 +1269,7 @@ class _ProfileCreateWidgetState extends State<ProfileCreateWidget> {
                                             .showSnackBar(
                                           SnackBar(
                                             content: Text(
-                                              'Profile photo is required for our attendants',
+                                              FloridaMessages.photoRequired(context),
                                               style: TextStyle(
                                                 color:
                                                     FlutterFlowTheme.of(context)
@@ -1301,7 +1302,7 @@ class _ProfileCreateWidgetState extends State<ProfileCreateWidget> {
                                           .showSnackBar(
                                         SnackBar(
                                           content: Text(
-                                            'Must select a state',
+                                            FloridaMessages.stateRequired(context),
                                             style: TextStyle(
                                               color:
                                                   FlutterFlowTheme.of(context)

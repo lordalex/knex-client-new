@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '/utils/florida_messages.dart';
 
 // Logging levels with color coding
 enum LogLevel {
@@ -138,7 +139,7 @@ Future<String> sendjsontourl(
   }
 }
 
-/// Wrapper for sendjsontourl with elegant error handling
+/// Wrapper for sendjsontourl with elegant Florida-themed error handling
 /// Returns a record with (success, data, errorMessage)
 Future<({bool success, String? data, String? errorMessage})> sendjsontourlSafe(
     String jsonString, String token, String baseUrl) async {
@@ -148,45 +149,18 @@ Future<({bool success, String? data, String? errorMessage})> sendjsontourlSafe(
     // Check if result is an error code
     final statusCode = int.tryParse(result);
     if (statusCode != null && statusCode >= 400) {
-      String errorMessage;
-      switch (statusCode) {
-        case 400:
-          errorMessage = 'Invalid request. Please check your data.';
-          break;
-        case 401:
-          errorMessage = 'Session expired. Please log in again.';
-          break;
-        case 403:
-          errorMessage = 'You don\'t have permission for this action.';
-          break;
-        case 404:
-          errorMessage = 'The requested resource was not found.';
-          break;
-        case 500:
-          errorMessage =
-              'Our servers are having issues. Please try again later.';
-          break;
-        case 502:
-        case 503:
-        case 504:
-          errorMessage = 'Service temporarily unavailable. Please try again.';
-          break;
-        default:
-          errorMessage = 'Something went wrong. Please try again.';
-      }
+      // Use Florida-themed messages for that sunshine state flair!
+      // Using static version since we don't have BuildContext here
+      final errorMessage = FloridaMessages.getMessageForStatusCodeStatic(statusCode);
       return (success: false, data: null, errorMessage: errorMessage);
     }
 
     return (success: true, data: result, errorMessage: null);
   } catch (e) {
     log(LogLevel.ERROR, 'sendjsontourlSafe caught exception: $e');
-    String errorMessage = 'Connection error. Please check your internet.';
-    if (e.toString().contains('timed out')) {
-      errorMessage = 'Request timed out. Please try again.';
-    } else if (e.toString().contains('SocketException') ||
-        e.toString().contains('NetworkException')) {
-      errorMessage = 'No internet connection. Please check your network.';
-    }
+    // Use Florida-themed error messages based on error type
+    // Using static version since we don't have BuildContext here
+    final errorMessage = FloridaMessages.getMessageForErrorStatic(e);
     return (success: false, data: null, errorMessage: errorMessage);
   }
 }
