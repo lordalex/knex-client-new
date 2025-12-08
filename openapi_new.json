@@ -1,0 +1,462 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "KNEX Valet Client Gateway API",
+    "version": "2.1.0",
+    "description": "This is the public-facing API Gateway for the Knex Valet Client application (Firebase Cloud Functions). It acts as a secure proxy, handling authentication (Firebase Auth), CORS, and routing before forwarding requests to the backend logic. It supports both protected (Authenticated) and casual (Public/Kiosk) endpoints.",
+    "contact": {
+      "name": "API Support",
+      "email": "support@knex-app.xyz"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://client.knex-app.xyz/api",
+      "description": "Production Cloud Functions Gateway"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Firebase ID Token passed in the Authorization header (Bearer scheme)."
+      },
+      "bodyAuth": {
+        "type": "apiKey",
+        "in": "query", 
+        "name": "idToken",
+        "description": "Legacy support: Firebase ID Token passed inside the JSON request body property 'idToken'."
+      }
+    },
+    "schemas": {
+      "ApiRequestWrapper": {
+        "type": "object",
+        "properties": {
+          "idToken": {
+            "type": "string",
+            "description": "Firebase Authentication ID Token (optional if Authorization header is used)."
+          },
+          "data": {
+            "type": "object",
+            "description": "The actual payload for the requested operation.",
+            "nullable": true
+          }
+        }
+      },
+      "ApiResponseWrapper": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "message": { "type": "string" },
+          "data": { "type": "object" },
+          "result": { "type": "object" },
+          "error": { "type": "string" }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Internal Server Error: Missing ID Token"
+          }
+        }
+      },
+      "Ticket": {
+        "type": "object",
+        "description": "A valet ticket object.",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "ticket_number": { "type": "string" },
+          "status": { 
+            "type": "string", 
+            "enum": ["Arrival", "Parked", "Departure", "Completed", "Cancelled"] 
+          },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "email": { "type": "string", "format": "email" },
+          "role": { "type": "string", "enum": ["ADMIN", "ATTENDANT", "CLIENT"] }
+        }
+      }
+    }
+  },
+  "security": [
+    { "bearerAuth": [] },
+    { "bodyAuth": [] }
+  ],
+  "paths": {
+    "/createTicket": {
+      "post": {
+        "summary": "Create a new Ticket",
+        "description": "Generates a new valet ticket. Requires authentication.",
+        "operationId": "createTicket",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiRequestWrapper"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket created successfully",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiResponseWrapper" } } }
+          },
+          "401": { "description": "Unauthorized" }
+        }
+      }
+    },
+    "/createProvisionalTicket": {
+      "post": {
+        "summary": "Create Provisional Ticket (Casual)",
+        "description": "Creates a ticket without a registered user (e.g., from a kiosk). Does not require an auth token.",
+        "operationId": "createProvisionalTicket",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                       "vehicleInfo": { "type": "object" },
+                       "siteId": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Success" }
+        }
+      }
+    },
+    "/cancelTicket": {
+      "post": {
+        "summary": "Cancel a Ticket (Alias)",
+        "description": "Legacy alias for `/setTicketToCancel`. Updates status to 'Cancelled'.",
+        "operationId": "cancelTicketAlias",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "idToken": { "type": "string" },
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "ticketId": { "type": "string" },
+                      "reason": { "type": "string" }
+                    },
+                    "required": ["ticketId"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Ticket cancelled" }
+        }
+      }
+    },
+    "/setTicketToCancel": {
+      "post": {
+        "summary": "Cancel a Ticket",
+        "description": "Canonical endpoint to cancel a ticket.",
+        "operationId": "setTicketToCancel",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiRequestWrapper" } } }
+        },
+        "responses": {
+          "200": { "description": "Success" }
+        }
+      }
+    },
+    "/getTicketList": {
+      "post": {
+        "summary": "Get List of Tickets",
+        "description": "Retrieves tickets filtered by status. User context is injected by the gateway based on the token.",
+        "operationId": "getTicketList",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "idToken": { "type": "string" },
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "status": { "type": "string", "example": "Parked" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "List of tickets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Ticket" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/getTicketByPIN": {
+      "post": {
+        "summary": "Get Ticket by PIN (Casual)",
+        "description": "Retrieves a ticket using a secure PIN. Casual endpoint (No Auth Token required).",
+        "operationId": "getTicketByPIN",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "pin": { "type": "string" }
+                    },
+                    "required": ["pin"]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Ticket found" },
+          "404": { "description": "Invalid PIN" }
+        }
+      }
+    },
+    "/ticketToDeparture": {
+      "post": {
+        "summary": "Request Vehicle (Alias)",
+        "description": "Legacy alias for `/setToDeparture`. Changes ticket status to 'Departure'.",
+        "operationId": "ticketToDepartureAlias",
+        "requestBody": {
+           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiRequestWrapper" } } }
+        },
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/setToDeparture": {
+      "post": {
+        "summary": "Request Vehicle",
+        "description": "Changes ticket status to 'Departure', signaling the attendant to retrieve the car.",
+        "operationId": "setToDeparture",
+        "requestBody": {
+           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiRequestWrapper" } } }
+        },
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/ticketToDepartureCasual": {
+      "post": {
+        "summary": "Request Vehicle (Casual)",
+        "description": "Alias for `/setToDepartureCasual`. Allows requesting a vehicle without full login (e.g. via SMS link).",
+        "operationId": "ticketToDepartureCasualAlias",
+        "security": [],
+        "requestBody": {
+           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiRequestWrapper" } } }
+        },
+        "responses": { "200": { "description": "Success" } }
+      }
+    },
+    "/setTip": {
+      "post": {
+        "summary": "Set Tip (Alias)",
+        "description": "Legacy alias for `/setTicketTip`. Records a tip for a transaction.",
+        "operationId": "setTipAlias",
+        "requestBody": {
+           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiRequestWrapper" } } }
+        },
+        "responses": { "200": { "description": "Tip recorded" } }
+      }
+    },
+    "/setTicketTip": {
+      "post": {
+        "summary": "Set Tip",
+        "description": "Records a tip amount for a specific ticket.",
+        "operationId": "setTicketTip",
+        "requestBody": {
+           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiRequestWrapper" } } }
+        },
+        "responses": { "200": { "description": "Tip recorded" } }
+      }
+    },
+    "/createCasualUser": {
+      "post": {
+        "summary": "Create Casual User (Alias)",
+        "description": "Alias for `/createUserClient`. Registers a user with minimal details (often just phone/email).",
+        "operationId": "createCasualUserAlias",
+        "security": [],
+        "requestBody": {
+           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiRequestWrapper" } } }
+        },
+        "responses": { "200": { "description": "User created" } }
+      }
+    },
+    "/linkUserClientToProvisionalTicket": {
+      "post": {
+        "summary": "Link User to Ticket (Alias)",
+        "description": "Alias for `/linkUserClientToTicketByProvisionalPIN`. Links a provisional ticket to a registered user.",
+        "operationId": "linkUserClientToProvisionalTicketAlias",
+        "security": [],
+        "requestBody": {
+           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiRequestWrapper" } } }
+        },
+        "responses": { "200": { "description": "Linked successfully" } }
+      }
+    },
+    "/generatePINandticket": {
+      "post": {
+        "summary": "Generate PIN and Ticket",
+        "description": "Generates a unique PIN and associated ticket for the authenticated user. Note: This endpoint ignores the 'data' payload and uses the authenticated email.",
+        "operationId": "generatePINandticket",
+        "requestBody": {
+           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiRequestWrapper" } } }
+        },
+        "responses": { 
+          "200": { 
+             "description": "PIN generated",
+             "content": { "application/json": { "schema": { "type": "object", "properties": { "pin": { "type": "string" } } } } }
+          }
+        }
+      }
+    },
+    "/generateReport": {
+      "post": {
+        "summary": "Generate Data Report",
+        "description": "Generates analytical reports for a specific model (e.g. 'Ticket', 'User').",
+        "operationId": "generateReport",
+        "requestBody": {
+           "content": { 
+             "application/json": { 
+               "schema": { 
+                 "type": "object", 
+                 "properties": { 
+                   "idToken": {"type": "string"},
+                   "data": { "type": "object", "properties": { "modelName": { "type": "string" } }, "required": ["modelName"] }
+                 } 
+               } 
+             } 
+           }
+        },
+        "responses": { "200": { "description": "Report generated" } }
+      }
+    },
+    "/search": {
+      "post": {
+        "summary": "Search Data",
+        "description": "Generic search endpoint for any data model.",
+        "operationId": "search",
+        "requestBody": {
+           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiRequestWrapper" } } }
+        },
+        "responses": { "200": { "description": "Search results" } }
+      }
+    },
+    "/update": {
+      "post": {
+        "summary": "Update Data",
+        "description": "Generic update endpoint for any data model.",
+        "operationId": "update",
+        "requestBody": {
+           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiRequestWrapper" } } }
+        },
+        "responses": { "200": { "description": "Update successful" } }
+      }
+    },
+    "/insert": {
+      "post": {
+        "summary": "Insert Data",
+        "description": "Generic insert endpoint for any data model.",
+        "operationId": "insert",
+        "requestBody": {
+           "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ApiRequestWrapper" } } }
+        },
+        "responses": { "200": { "description": "Insert successful" } }
+      }
+    },
+    "/backfillCompanyId": { "post": { "summary": "Backfill Company ID", "description": "Admin Utility", "responses": { "200": { "description": "Success" } } } },
+    "/confirmPayment": { "post": { "summary": "Confirm Payment", "description": "Confirms a Stripe payment intent.", "responses": { "200": { "description": "Success" } } } },
+    "/createAttendant": { "post": { "summary": "Create Attendant", "description": "Creates a new UserAttendant record.", "responses": { "200": { "description": "Success" } } } },
+    "/createCompanyAndUpdateProfile": { "post": { "summary": "Create Company", "description": "Creates a company and links it to the user profile.", "responses": { "200": { "description": "Success" } } } },
+    "/createLocation": { "post": { "summary": "Create Location", "description": "Adds a new location to a company.", "responses": { "200": { "description": "Success" } } } },
+    "/createTicketForAttendant": { "post": { "summary": "Create Ticket (Attendant)", "description": "Attendant specific flow to create a ticket.", "responses": { "200": { "description": "Success" } } } },
+    "/createUser": { "post": { "summary": "Create User", "description": "Generic user creation.", "responses": { "200": { "description": "Success" } } } },
+    "/createUserClient": { "post": { "summary": "Create Client", "description": "Creates a new UserClient.", "responses": { "200": { "description": "Success" } } } },
+    "/generate-car-details": { "post": { "summary": "AI Vehicle Details", "description": "Analyzes an image to determine vehicle make/model.", "responses": { "200": { "description": "Analysis result" } } } },
+    "/get-enum": { "post": { "summary": "Get Enum", "description": "Retrieves valid enum values for a schema property.", "responses": { "200": { "description": "Enum values" } } } },
+    "/getAttendants": { "post": { "summary": "Get Attendants", "description": "List attendants.", "responses": { "200": { "description": "List" } } } },
+    "/getAttendantsForAdmin": { "post": { "summary": "Get Attendants (Admin)", "description": "Admin view of attendants.", "responses": { "200": { "description": "List" } } } },
+    "/getAttendantsForCompany": { "post": { "summary": "Get Company Attendants", "description": "List attendants for current user's company.", "responses": { "200": { "description": "List" } } } },
+    "/getBusinessProfile": { "post": { "summary": "Get Business Profile", "description": "Combined user and company profile.", "responses": { "200": { "description": "Profile data" } } } },
+    "/getCompany": { "post": { "summary": "Get Company", "description": "Get company details.", "responses": { "200": { "description": "Company data" } } } },
+    "/getCompanyDetailsForAdmin": { "post": { "summary": "Get Company (Admin)", "description": "Full company details for admin.", "responses": { "200": { "description": "Company data" } } } },
+    "/getLatestTicket": { "post": { "summary": "Get Latest Ticket", "description": "Gets the most recent ticket for the user.", "responses": { "200": { "description": "Ticket data" } } } },
+    "/getLocationsForCompany": { "post": { "summary": "Get Locations", "description": "List company locations.", "responses": { "200": { "description": "Locations list" } } } },
+    "/getLocationsForCompanyForAdmin": { "post": { "summary": "Get Locations (Admin)", "description": "Admin list of locations.", "responses": { "200": { "description": "Locations list" } } } },
+    "/getSumTipsForAdmin": { "post": { "summary": "Tip Summary", "description": "Aggregated tip data.", "responses": { "200": { "description": "Summary data" } } } },
+    "/getSumTipsForAdminPerAttendant": { "post": { "summary": "Attendant Tip Summary", "description": "Tip data grouped by attendant.", "responses": { "200": { "description": "Summary data" } } } },
+    "/getTicketListForAdmin": { "post": { "summary": "Ticket List (Admin)", "description": "Full view of tickets for admin.", "responses": { "200": { "description": "List" } } } },
+    "/getTipsForAdmin": { "post": { "summary": "Get Tips", "description": "Detailed tip history.", "responses": { "200": { "description": "List" } } } },
+    "/getUser": { "post": { "summary": "Get User", "description": "Get user details.", "responses": { "200": { "description": "User data" } } } },
+    "/getUserByEmail": { "post": { "summary": "Get User by Email", "description": "Lookup user by email.", "responses": { "200": { "description": "User data" } } } },
+    "/getUserProfileByEmail": { "post": { "summary": "Get Profile by Email", "description": "Lookup full profile by email.", "responses": { "200": { "description": "Profile data" } } } },
+    "/getUsersForCompany": { "post": { "summary": "Get Company Users", "description": "List all users in company.", "responses": { "200": { "description": "List" } } } },
+    "/linkUserClientToTicketByProvisionalPIN": { "post": { "summary": "Link User to Ticket", "description": "Casual endpoint to claim a ticket via PIN.", "security": [], "responses": { "200": { "description": "Success" } } } },
+    "/migrateData": { "post": { "summary": "Migrate Data", "description": "System admin migration tool.", "responses": { "200": { "description": "Success" } } } },
+    "/registerAttendant": { "post": { "summary": "Register Attendant", "description": "Registration flow for attendants.", "responses": { "200": { "description": "Success" } } } },
+    "/searchUser": { "post": { "summary": "Search User", "description": "Specific user search.", "responses": { "200": { "description": "Results" } } } },
+    "/setCarLocation": { "post": { "summary": "Set Car Location", "description": "Updates the parking space of a car.", "responses": { "200": { "description": "Success" } } } },
+    "/setKeysLocation": { "post": { "summary": "Set Keys Location", "description": "Updates the locker location of keys.", "responses": { "200": { "description": "Success" } } } },
+    "/setTicketStatus": { "post": { "summary": "Set Ticket Status", "description": "Updates the status of a ticket.", "responses": { "200": { "description": "Success" } } } },
+    "/setTicketToProcessing": { "post": { "summary": "Set Processing", "description": "Updates status to Processing.", "responses": { "200": { "description": "Success" } } } },
+    "/setToCancelForClient": { "post": { "summary": "Client Cancel", "description": "Client requested cancellation.", "responses": { "200": { "description": "Success" } } } },
+    "/setToDepartureCasual": { "post": { "summary": "Departure (Casual)", "description": "Casual endpoint for departure request.", "security": [], "responses": { "200": { "description": "Success" } } } },
+    "/ticketToParked": { "post": { "summary": "Park Ticket", "description": "Sets status to Parked.", "responses": { "200": { "description": "Success" } } } },
+    "/updateAttendant": { "post": { "summary": "Update Attendant", "description": "Updates attendant details.", "responses": { "200": { "description": "Success" } } } },
+    "/updateCompany": { "post": { "summary": "Update Company", "description": "Updates company details.", "responses": { "200": { "description": "Success" } } } },
+    "/updateLocation": { "post": { "summary": "Update Location", "description": "Updates location details.", "responses": { "200": { "description": "Success" } } } },
+    "/updateUser": { "post": { "summary": "Update User", "description": "Updates user details.", "responses": { "200": { "description": "Success" } } } }
+  }
+}
+

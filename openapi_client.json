@@ -1,0 +1,1294 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "KNEX Valet Client Gateway API",
+    "version": "2.1.0",
+    "description": "This is the public-facing API Gateway for the Knex Valet Client application (Firebase Cloud Functions). It acts as a secure proxy, handling authentication (Firebase Auth), CORS, and routing before forwarding requests to the backend logic. It supports both protected (Authenticated) and casual (Public/Kiosk) endpoints.",
+    "contact": {
+      "name": "API Support",
+      "email": "support@knex-app.xyz"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://us-central1-knex-client24.cloudfunctions.net/api",
+      "description": "Production Cloud Functions Gateway"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Firebase ID Token passed in the Authorization header (Bearer scheme)."
+      },
+      "bodyAuth": {
+        "type": "apiKey",
+        "in": "query",
+        "name": "idToken",
+        "description": "Legacy support: Firebase ID Token passed inside the JSON request body property 'idToken'."
+      }
+    },
+    "schemas": {
+      "ApiRequestWrapper": {
+        "type": "object",
+        "properties": {
+          "idToken": {
+            "type": "string",
+            "description": "Firebase Authentication ID Token (optional if Authorization header is used)."
+          },
+          "data": {
+            "type": "object",
+            "description": "The actual payload for the requested operation.",
+            "nullable": true
+          }
+        },
+        "example": {
+          "idToken": "your-firebase-id-token",
+          "data": {
+            "modelName": "Ticket",
+            "action": "create",
+            "payload": {
+              "status": "Arrival"
+            }
+          }
+        }
+      },
+      "ApiResponseWrapper": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Indicates the outcome of the request.",
+            "example": "success"
+          },
+          "message": {
+            "type": "string",
+            "description": "A human-readable message providing details about the result.",
+            "example": "Operation completed successfully."
+          },
+          "data": {
+            "type": "object",
+            "description": "The primary data payload of the response.",
+            "nullable": true
+          },
+          "result": {
+            "type": "object",
+            "description": "Additional results or metadata.",
+            "nullable": true
+          },
+          "error": {
+            "type": "string",
+            "description": "An error message if the request failed.",
+            "nullable": true
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Internal Server Error: Missing ID Token"
+          }
+        }
+      },
+      "Ticket": {
+        "type": "object",
+        "description": "A valet ticket object.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The unique identifier for the ticket."
+          },
+          "ticket_number": {
+            "type": "string",
+            "description": "The human-readable ticket number."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "Arrival",
+              "Parked",
+              "Departure",
+              "Completed",
+              "Cancelled"
+            ],
+            "description": "The current status of the valet ticket."
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The timestamp when the ticket was created."
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "The unique identifier for the user."
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "The user's email address."
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "ADMIN",
+              "ATTENDANT",
+              "CLIENT"
+            ],
+            "description": "The role of the user within the system."
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/createTicket": {
+      "post": {
+        "summary": "Create a new Ticket",
+        "description": "Generates a new valet ticket for an authenticated user. The request must include vehicle information and the site ID.",
+        "operationId": "createTicket",
+        "requestBody": {
+          "required": true,
+          "description": "Request body must contain the ticket data, including vehicle info and site ID.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiRequestWrapper"
+              },
+              "examples": {
+                "CreateNewTicket": {
+                  "value": {
+                    "idToken": "your-firebase-id-token",
+                    "data": {
+                      "vehicleInfo": {
+                        "make": "Toyota",
+                        "model": "Camry",
+                        "color": "Blue"
+                      },
+                      "siteId": "your-site-id"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket created successfully. Returns the newly created ticket object.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseWrapper"
+                },
+                "examples": {
+                  "Success": {
+                    "value": {
+                      "status": "success",
+                      "message": "Ticket created",
+                      "data": {
+                        "id": "tck_12345",
+                        "ticket_number": "101",
+                        "status": "Arrival",
+                        "created_at": "2025-11-29T10:00:00Z"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. The provided ID token is missing, invalid, or expired.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "examples": {
+                  "UnauthorizedError": {
+                    "value": {
+                      "error": "Unauthorized: Invalid token"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/createProvisionalTicket": {
+      "post": {
+        "summary": "Create Provisional Ticket (Casual)",
+        "description": "Creates a ticket without a registered user (e.g., from a kiosk). This endpoint is public and does not require an authentication token. It's used for casual customers who are not registered in the system.",
+        "operationId": "createProvisionalTicket",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "description": "The request must contain vehicle information and the site ID.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "vehicleInfo": {
+                        "type": "object",
+                        "description": "Information about the vehicle."
+                      },
+                      "siteId": {
+                        "type": "string",
+                        "description": "The ID of the valet site."
+                      }
+                    }
+                  }
+                }
+              },
+              "examples": {
+                "ProvisionalTicket": {
+                  "value": {
+                    "data": {
+                      "vehicleInfo": {
+                        "make": "Honda",
+                        "model": "Civic",
+                        "color": "Black"
+                      },
+                      "siteId": "your-site-id"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Provisional ticket created successfully. The response includes a PIN for the user to retrieve their ticket later.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseWrapper"
+                },
+                "examples": {
+                  "Success": {
+                    "value": {
+                      "status": "success",
+                      "message": "Provisional ticket created",
+                      "data": {
+                        "ticketId": "tck_67890",
+                        "pin": "1234"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cancelTicket": {
+      "post": {
+        "summary": "Cancel a Ticket (Alias)",
+        "description": "Legacy alias for `/setTicketToCancel`. Updates a ticket's status to 'Cancelled'. Requires authentication.",
+        "operationId": "cancelTicketAlias",
+        "requestBody": {
+          "required": true,
+          "description": "Requires the ID of the ticket to be cancelled and a reason for cancellation.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "idToken": {
+                    "type": "string"
+                  },
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "ticketId": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "ticketId"
+                    ]
+                  }
+                }
+              },
+              "examples": {
+                "CancelRequest": {
+                  "value": {
+                    "idToken": "your-firebase-id-token",
+                    "data": {
+                      "ticketId": "tck_12345",
+                      "reason": "Customer changed their mind."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket cancelled successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseWrapper"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/setTicketToCancel": {
+      "post": {
+        "summary": "Cancel a Ticket",
+        "description": "Canonical endpoint to cancel a ticket. Updates a ticket's status to 'Cancelled'. Requires authentication.",
+        "operationId": "setTicketToCancel",
+        "requestBody": {
+          "required": true,
+          "description": "Requires the ID of the ticket to be cancelled.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiRequestWrapper"
+              },
+              "examples": {
+                "CancelRequest": {
+                  "value": {
+                    "idToken": "your-firebase-id-token",
+                    "data": {
+                      "ticketId": "tck_12345"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket cancelled successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseWrapper"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/getTicketList": {
+      "post": {
+        "summary": "Get List of Tickets",
+        "description": "Retrieves a list of tickets, optionally filtered by status. The user's context (e.g., their company or role) is automatically inferred from the authentication token.",
+        "operationId": "getTicketList",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "idToken": {
+                    "type": "string"
+                  },
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "example": "Parked"
+                      }
+                    }
+                  }
+                }
+              },
+              "examples": {
+                "FilterByStatus": {
+                  "value": {
+                    "idToken": "your-firebase-id-token",
+                    "data": {
+                      "status": "Parked"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "A list of tickets matching the criteria.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Ticket"
+                      }
+                    }
+                  }
+                },
+                "examples": {
+                  "TicketList": {
+                    "value": {
+                      "status": "success",
+                      "data": [
+                        {
+                          "id": "tck_123",
+                          "ticket_number": "101",
+                          "status": "Parked",
+                          "created_at": "2025-11-29T10:00:00Z"
+                        },
+                        {
+                          "id": "tck_456",
+                          "ticket_number": "102",
+                          "status": "Parked",
+                          "created_at": "2025-11-29T10:05:00Z"
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/getTicketByPIN": {
+      "post": {
+        "summary": "Get Ticket by PIN (Casual)",
+        "description": "Retrieves a ticket using a secure PIN. This is a public endpoint for casual users who do not have an account.",
+        "operationId": "getTicketByPIN",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "description": "Requires the PIN associated with the ticket.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "pin": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "pin"
+                    ]
+                  }
+                }
+              },
+              "examples": {
+                "GetByPIN": {
+                  "value": {
+                    "data": {
+                      "pin": "1234"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ticket found and returned.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponseWrapper"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invalid PIN. The provided PIN does not match any ticket.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ticketToDeparture": {
+      "post": {
+        "summary": "Request Vehicle (Alias)",
+        "description": "Legacy alias for `/setToDeparture`. Changes ticket status to 'Departure', signaling the attendant to retrieve the car.",
+        "operationId": "ticketToDepartureAlias",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiRequestWrapper"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/setToDeparture": {
+      "post": {
+        "summary": "Request Vehicle",
+        "description": "Changes ticket status to 'Departure', signaling the attendant to retrieve the car.",
+        "operationId": "setToDeparture",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiRequestWrapper"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/ticketToDepartureCasual": {
+      "post": {
+        "summary": "Request Vehicle (Casual)",
+        "description": "Alias for `/setToDepartureCasual`. Allows requesting a vehicle without full login (e.g. via SMS link).",
+        "operationId": "ticketToDepartureCasualAlias",
+        "security": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiRequestWrapper"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/setTip": {
+      "post": {
+        "summary": "Set Tip (Alias)",
+        "description": "Legacy alias for `/setTicketTip`. Records a tip for a transaction.",
+        "operationId": "setTipAlias",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiRequestWrapper"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tip recorded"
+          }
+        }
+      }
+    },
+    "/setTicketTip": {
+      "post": {
+        "summary": "Set Tip",
+        "description": "Records a tip amount for a specific ticket.",
+        "operationId": "setTicketTip",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiRequestWrapper"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tip recorded"
+          }
+        }
+      }
+    },
+    "/createCasualUser": {
+      "post": {
+        "summary": "Create Casual User (Alias)",
+        "description": "Alias for `/createUserClient`. Registers a user with minimal details (often just phone/email).",
+        "operationId": "createCasualUserAlias",
+        "security": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiRequestWrapper"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User created"
+          }
+        }
+      }
+    },
+    "/linkUserClientToProvisionalTicket": {
+      "post": {
+        "summary": "Link User to Ticket (Alias)",
+        "description": "Alias for `/linkUserClientToTicketByProvisionalPIN`. Links a provisional ticket to a registered user.",
+        "operationId": "linkUserClientToProvisionalTicketAlias",
+        "security": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiRequestWrapper"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Linked successfully"
+          }
+        }
+      }
+    },
+    "/generatePINandticket": {
+      "post": {
+        "summary": "Generate PIN and Ticket",
+        "description": "Generates a unique PIN and associated ticket for the authenticated user. Note: This endpoint ignores the 'data' payload and uses the authenticated email.",
+        "operationId": "generatePINandticket",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiRequestWrapper"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "PIN generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "pin": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/generateReport": {
+      "post": {
+        "summary": "Generate Data Report",
+        "description": "Generates analytical reports for a specific model (e.g. 'Ticket', 'User').",
+        "operationId": "generateReport",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "idToken": {
+                    "type": "string"
+                  },
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "modelName": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "modelName"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Report generated"
+          }
+        }
+      }
+    },
+    "/search": {
+      "post": {
+        "summary": "Search Data",
+        "description": "Generic search endpoint for any data model.",
+        "operationId": "search",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiRequestWrapper"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Search results"
+          }
+        }
+      }
+    },
+    "/update": {
+      "post": {
+        "summary": "Update Data",
+        "description": "Generic update endpoint for any data model.",
+        "operationId": "update",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiRequestWrapper"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Update successful"
+          }
+        }
+      }
+    },
+    "/insert": {
+      "post": {
+        "summary": "Insert Data",
+        "description": "Generic insert endpoint for any data model.",
+        "operationId": "insert",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiRequestWrapper"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Insert successful"
+          }
+        }
+      }
+    },
+    "/backfillCompanyId": {
+      "post": {
+        "summary": "Backfill Company ID",
+        "description": "Admin Utility: Populates the company ID for records that are missing it. This is a data maintenance endpoint.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/confirmPayment": {
+      "post": {
+        "summary": "Confirm Payment",
+        "description": "Confirms a Stripe payment intent, finalizing the payment process for a ticket.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/createAttendant": {
+      "post": {
+        "summary": "Create Attendant",
+        "description": "Creates a new UserAttendant record, typically invited by a company admin.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/createCompanyAndUpdateProfile": {
+      "post": {
+        "summary": "Create Company",
+        "description": "Creates a new company and links it to the calling user's profile, making them the company owner.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/createLocation": {
+      "post": {
+        "summary": "Create Location",
+        "description": "Adds a new physical location (e.g., a garage or lot) to a company.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/createTicketForAttendant": {
+      "post": {
+        "summary": "Create Ticket (Attendant)",
+        "description": "An attendant-specific workflow to create a new valet ticket for a customer.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/createUser": {
+      "post": {
+        "summary": "Create User",
+        "description": "Generic user creation endpoint. The specific type of user (Client, Attendant) is determined by the payload.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/createUserClient": {
+      "post": {
+        "summary": "Create Client",
+        "description": "Creates a new UserClient, representing a customer of the valet service.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/generate-car-details": {
+      "post": {
+        "summary": "AI Vehicle Details",
+        "description": "Analyzes an image of a vehicle to automatically determine its make, model, and color using AI.",
+        "responses": {
+          "200": {
+            "description": "Analysis result"
+          }
+        }
+      }
+    },
+    "/get-enum": {
+      "post": {
+        "summary": "Get Enum",
+        "description": "Retrieves the valid enum values for a given schema property (e.g., the possible values for 'Ticket.status').",
+        "responses": {
+          "200": {
+            "description": "Enum values"
+          }
+        }
+      }
+    },
+    "/getAttendants": {
+      "post": {
+        "summary": "Get Attendants",
+        "description": "Lists all attendants associated with the user's company.",
+        "responses": {
+          "200": {
+            "description": "List"
+          }
+        }
+      }
+    },
+    "/getAttendantsForAdmin": {
+      "post": {
+        "summary": "Get Attendants (Admin)",
+        "description": "Admin endpoint to view all attendants across all companies.",
+        "responses": {
+          "200": {
+            "description": "List"
+          }
+        }
+      }
+    },
+    "/getAttendantsForCompany": {
+      "post": {
+        "summary": "Get Company Attendants",
+        "description": "List all attendants for the current user's company.",
+        "responses": {
+          "200": {
+            "description": "List"
+          }
+        }
+      }
+    },
+    "/getBusinessProfile": {
+      "post": {
+        "summary": "Get Business Profile",
+        "description": "Retrieves a combined profile containing both user details and their associated company information.",
+        "responses": {
+          "200": {
+            "description": "Profile data"
+          }
+        }
+      }
+    },
+    "/getCompany": {
+      "post": {
+        "summary": "Get Company",
+        "description": "Get details for the user's currently associated company.",
+        "responses": {
+          "200": {
+            "description": "Company data"
+          }
+        }
+      }
+    },
+    "/getCompanyDetailsForAdmin": {
+      "post": {
+        "summary": "Get Company (Admin)",
+        "description": "Admin endpoint to get full, unrestricted details for any company.",
+        "responses": {
+          "200": {
+            "description": "Company data"
+          }
+        }
+      }
+    },
+    "/getLatestTicket": {
+      "post": {
+        "summary": "Get Latest Ticket",
+        "description": "Gets the most recent ticket for the authenticated user.",
+        "responses": {
+          "200": {
+            "description": "Ticket data"
+          }
+        }
+      }
+    },
+    "/getLocationsForCompany": {
+      "post": {
+        "summary": "Get Locations",
+        "description": "List all physical locations for the user's company.",
+        "responses": {
+          "200": {
+            "description": "Locations list"
+          }
+        }
+      }
+    },
+    "/getLocationsForCompanyForAdmin": {
+      "post": {
+        "summary": "Get Locations (Admin)",
+        "description": "Admin endpoint to list all locations across all companies.",
+        "responses": {
+          "200": {
+            "description": "Locations list"
+          }
+        }
+      }
+    },
+    "/getSumTipsForAdmin": {
+      "post": {
+        "summary": "Tip Summary",
+        "description": "Admin endpoint to get aggregated tip data across the platform.",
+        "responses": {
+          "200": {
+            "description": "Summary data"
+          }
+        }
+      }
+    },
+    "/getSumTipsForAdminPerAttendant": {
+      "post": {
+        "summary": "Attendant Tip Summary",
+        "description": "Admin endpoint for tip data, grouped by each attendant.",
+        "responses": {
+          "200": {
+            "description": "Summary data"
+          }
+        }
+      }
+    },
+    "/getTicketListForAdmin": {
+      "post": {
+        "summary": "Ticket List (Admin)",
+        "description": "Admin endpoint for a full, unfiltered view of all tickets in the system.",
+        "responses": {
+          "200": {
+            "description": "List"
+          }
+        }
+      }
+    },
+    "/getTipsForAdmin": {
+      "post": {
+        "summary": "Get Tips",
+        "description": "Admin endpoint to retrieve a detailed history of all tips.",
+        "responses": {
+          "200": {
+            "description": "List"
+          }
+        }
+      }
+    },
+    "/getUser": {
+      "post": {
+        "summary": "Get User",
+        "description": "Get details for the currently authenticated user.",
+        "responses": {
+          "200": {
+            "description": "User data"
+          }
+        }
+      }
+    },
+    "/getUserByEmail": {
+      "post": {
+        "summary": "Get User by Email",
+        "description": "Look up a user profile by their email address.",
+        "responses": {
+          "200": {
+            "description": "User data"
+          }
+        }
+      }
+    },
+    "/getUserProfileByEmail": {
+      "post":{
+        "summary": "Get Profile by Email",
+        "description": "Look up a full user profile (including associated data) by email.",
+        "responses": {
+          "200": {
+            "description": "Profile data"
+          }
+        }
+      }
+    },
+    "/getUsersForCompany": {
+      "post": {
+        "summary": "Get Company Users",
+        "description": "List all users registered under the current user's company.",
+        "responses": {
+          "200": {
+            "description": "List"
+          }
+        }
+      }
+    },
+    "/linkUserClientToTicketByProvisionalPIN": {
+      "post": {
+        "summary": "Link User to Ticket",
+        "description": "Casual endpoint to claim a provisional ticket and link it to a user account by providing the PIN.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/migrateData": {
+      "post": {
+        "summary": "Migrate Data",
+        "description": "System admin utility for performing data migrations between database schemas or structures.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/registerAttendant": {
+      "post": {
+        "summary": "Register Attendant",
+        "description": "The registration flow for a new attendant, linking them to a company.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/searchUser": {
+      "post": {
+        "summary": "Search User",
+        "description": "A specific user search endpoint, likely with more detailed filtering options than the generic search.",
+        "responses": {
+          "200": {
+            "description": "Results"
+          }
+        }
+      }
+    },
+    "/setCarLocation": {
+      "post": {
+        "summary": "Set Car Location",
+        "description": "Updates the parking space or location of a car associated with a ticket.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/setKeysLocation": {
+      "post": {
+        "summary": "Set Keys Location",
+        "description": "Updates the location of the car keys (e.g., a specific key locker or hook number).",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/setTicketStatus": {
+      "post": {
+        "summary": "Set Ticket Status",
+        "description": "A generic endpoint to update the status of a ticket to any valid state.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/setTicketToProcessing": {
+      "post": {
+        "summary": "Set Processing",
+        "description": "Updates ticket status to 'Processing', typically used when payment is being handled.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/setToCancelForClient": {
+      "post": {
+        "summary": "Client Cancel",
+        "description": "Allows a client to request the cancellation of their own ticket.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/setToDepartureCasual": {
+      "post": {
+        "summary": "Departure (Casual)",
+        "description": "A public endpoint for a casual user to request their vehicle for departure, likely using a PIN or unique link.",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/ticketToParked": {
+      "post": {
+        "summary": "Park Ticket",
+        "description": "Sets the ticket status to 'Parked' after the attendant has parked the vehicle.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/updateAttendant": {
+      "post": {
+        "summary": "Update Attendant",
+        "description": "Updates the details of an existing attendant.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/updateCompany": {
+      "post": {
+        "summary": "Update Company",
+        "description": "Updates the details of an existing company.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/updateLocation": {
+      "post": {
+        "summary": "Update Location",
+        "description": "Updates the details of an existing location.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    },
+    "/updateUser": {
+      "post": {
+        "summary": "Update User",
+        "description": "Updates the details of an existing user.",
+        "responses": {
+          "200": {
+            "description": "Success"
+          }
+        }
+      }
+    }
+  }
+}

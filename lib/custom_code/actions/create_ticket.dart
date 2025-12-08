@@ -11,14 +11,41 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-class ticketdataResponse {
+// Logging levels with color coding
+enum LogLevel {
+  INFO,
+  WARNING,
+  ERROR,
+  DEBUG,
+}
+
+// Set the verbosity level (0-3, where 3 is most verbose)
+const int verbosity = 3;
+
+// Enhanced logging function
+void log(LogLevel level, String message) {
+  if (level.index <= verbosity) {
+    final timestamp = DateTime.now().toIso8601String();
+    final prefix = level.toString().split('.').last;
+    final color = {
+      LogLevel.INFO: '\x1B[32m', // Green
+      LogLevel.WARNING: '\x1B[33m', // Yellow
+      LogLevel.ERROR: '\x1B[31m', // Red
+      LogLevel.DEBUG: '\x1B[34m', // Blue
+    }[level];
+    final resetColor = '\x1B[0m';
+    print('$color[$timestamp][$prefix] $message$resetColor');
+  }
+}
+
+class TicketDataResponse {
   final bool success;
   final String message;
   final dynamic data;
   final String? error;
   final int? statusCode;
 
-  ticketdataResponse({
+  TicketDataResponse({
     required this.success,
     required this.message,
     this.data,
@@ -35,95 +62,64 @@ class ticketdataResponse {
       };
 }
 
-// Logging levels with color coding
-enum LogLevel {
-  INFO,
-  WARNING,
-  ERROR;
-
-  String get ansiColor {
-    switch (this) {
-      case LogLevel.INFO:
-        return '\x1B[32m'; // Green
-      case LogLevel.WARNING:
-        return '\x1B[33m'; // Yellow
-      case LogLevel.ERROR:
-        return '\x1B[31m'; // Red
-    }
-  }
-}
-
-// Enhanced logging function
-void logMessage(LogLevel level, String message) {
-  final timestamp = DateTime.now().toIso8601String();
-  final prefix = level.toString().split('.').last;
-  final resetColor = '\x1B[0m';
-  print('${level.ansiColor}[$timestamp][$prefix] $message$resetColor');
-}
-
-// Input validation class
-class InputValidator {
-  static void validateInputs({
-    required String token,
-    required String firebaseUrl,
-  }) {
+Future<String> createTicket(String firebaseUrl, String token, String site,
+    String vehicleInfo, String mail, List<String> notes) async {
+  log(LogLevel.INFO, 'Starting createTicket operation');
+  try {
+    // 1. Pre-computation and Validation
     if (token.isEmpty) {
-      throw ArgumentError('Token cannot be empty');
+      log(LogLevel.ERROR, 'Auth token is empty.');
+      throw Exception('Auth token cannot be empty.');
     }
     if (firebaseUrl.isEmpty) {
-      throw ArgumentError('firebase URL cannot be empty');
+      log(LogLevel.ERROR, 'Firebase URL is empty.');
+      throw Exception('Firebase URL cannot be empty.');
     }
-    const ticketdata = {};
-    // Validate URL format
-    try {
-      final uri = Uri.parse(firebaseUrl);
-      if (!uri.isAbsolute) {
-        throw FormatException('Invalid firebase URL format');
-      }
-    } catch (e) {
-      throw FormatException('Invalid URL format: $e');
-    }
-  }
-}
 
-Future<String> createTicket(String firebaseUrl, String token, String Site,
-    String vehicleInfo, String mail, List<String> notes) async {
-  logMessage(LogLevel.INFO, 'Starting sendticketdata operation');
-  try {
-    // Validate inputs
-    const ticketdata = {};
-    logMessage(LogLevel.INFO, 'Validating input parameters');
-    InputValidator.validateInputs(
-      token: token,
-      firebaseUrl: firebaseUrl,
-    );
-    final uri = Uri.parse(firebaseUrl);
-    // Prepare request with retry mechanism
-    print(firebaseUrl);
-    print(Site);
+    Uri uri;
+    try {
+      uri = Uri.parse(firebaseUrl);
+      log(LogLevel.DEBUG, 'URI parsed successfully: $uri');
+    } catch (e) {
+      log(LogLevel.ERROR, 'Error parsing URI: $e');
+      throw Exception('URI parsing failed: $e');
+    }
+
+    final body = {
+      'idToken': token,
+      "data": {
+        "siteId": site.replaceAll('"', ""),
+        "mail": mail,
+        "vehicleInfo": jsonDecode(vehicleInfo),
+        "notes": notes
+      }
+    };
+    final headers = {'Content-Type': 'application/json'};
+
+    // 2. Pre-API Call Logging
+    log(LogLevel.INFO, 'Preparing to send HTTP POST request to $uri');
+    log(LogLevel.DEBUG, 'Request Headers: ${jsonEncode(headers)}');
+    log(LogLevel.DEBUG, 'Request Body: ${jsonEncode(body)}');
+
+    // 3. API Call
     final response = await _sendRequestWithRetry(
       uri: uri,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: {
-        'idToken': token,
-        "data": {
-          "site": Site.replaceAll('"', ""),
-          "mail": mail,
-          "vehicleInfo": vehicleInfo,
-          "notes": notes
-        }
-      },
+      headers: headers,
+      body: body,
     );
-    // Process response
-    final ticketdataResponse = _processResponse(response);
-    print(response);
-    logMessage(LogLevel.INFO, 'Operation completed successfully');
-    return jsonEncode(ticketdataResponse.toJson());
+
+    // 4. Post-API Call Logging
+    log(LogLevel.INFO,
+        'Received response from $uri with status code: ${response.statusCode}');
+    log(LogLevel.DEBUG, 'Response Body: ${response.body}');
+
+    // 5. Post-computation and Response Handling
+    final ticketResponse = _processResponse(response);
+    log(LogLevel.INFO, 'Operation completed successfully');
+    return jsonEncode(ticketResponse.toJson());
   } catch (e) {
-    logMessage(LogLevel.ERROR, 'Error in sendticketdata: $e');
-    return jsonEncode(ticketdataResponse(
+    log(LogLevel.ERROR, 'Error in createTicket: $e');
+    return jsonEncode(TicketDataResponse(
       success: false,
       message: 'Operation failed',
       error: e.toString(),
@@ -142,25 +138,24 @@ Future<http.Response> _sendRequestWithRetry({
   int attempts = 0;
   while (attempts < maxRetries) {
     try {
-      logMessage(LogLevel.INFO,
+      log(LogLevel.INFO,
           'Sending HTTP request (attempt ${attempts + 1}/$maxRetries)');
       final response = await http.post(
         uri,
         headers: headers,
         body: jsonEncode(body),
       );
-      // Only retry on 5xx server errors
       if (response.statusCode < 500) {
         return response;
       }
       attempts++;
       if (attempts < maxRetries) {
-        logMessage(LogLevel.WARNING,
+        log(LogLevel.WARNING,
             'Request failed with ${response.statusCode}, retrying...');
         await Future.delayed(retryDelay * attempts);
       }
     } on http.ClientException catch (e) {
-      logMessage(LogLevel.ERROR, 'Network error: $e');
+      log(LogLevel.ERROR, 'Network error: $e');
       attempts++;
       if (attempts >= maxRetries) rethrow;
       await Future.delayed(retryDelay * attempts);
@@ -170,20 +165,20 @@ Future<http.Response> _sendRequestWithRetry({
 }
 
 // Helper function to process HTTP response
-ticketdataResponse _processResponse(http.Response response) {
-  logMessage(LogLevel.INFO, 'Processing response: ${response.statusCode}');
+TicketDataResponse _processResponse(http.Response response) {
+  log(LogLevel.INFO, 'Processing response: ${response.statusCode}');
   if (response.statusCode >= 200 && response.statusCode < 300) {
-    return ticketdataResponse(
+    return TicketDataResponse(
       success: true,
-      message: 'ticketdata updated successfully',
+      message: 'Ticket data updated successfully',
       data: jsonDecode(response.body),
       statusCode: response.statusCode,
     );
   }
 
-  return ticketdataResponse(
+  return TicketDataResponse(
     success: false,
-    message: 'Failed to update ticketdata: ${response.reasonPhrase}',
+    message: 'Failed to update ticket data: ${response.reasonPhrase}',
     error: response.body,
     statusCode: response.statusCode,
   );

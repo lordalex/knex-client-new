@@ -11,47 +11,66 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+// Logging levels with color coding
+enum LogLevel {
+  INFO,
+  WARNING,
+  ERROR,
+  DEBUG,
+}
+
+// Set the verbosity level (0-3, where 3 is most verbose)
+const int verbosity = 3;
+
+// Enhanced logging function
+void log(LogLevel level, String message) {
+  if (level.index <= verbosity) {
+    final timestamp = DateTime.now().toIso8601String();
+    final prefix = level.toString().split('.').last;
+    final color = {
+      LogLevel.INFO: '\x1B[32m', // Green
+      LogLevel.WARNING: '\x1B[33m', // Yellow
+      LogLevel.ERROR: '\x1B[31m', // Red
+      LogLevel.DEBUG: '\x1B[34m', // Blue
+    }[level];
+    final resetColor = '\x1B[0m';
+    print('$color[$timestamp][$prefix] $message$resetColor');
+  }
+}
+
 Future<String> getUser(String token, String baseUrl) async {
-  print('Starting sendprofile function...');
-  // Initial parameter validation
-  // URI parsing block
-  Map<String, dynamic> responseData;
-  http.Response response;
+  log(LogLevel.INFO, 'Starting getUser function...');
+
+  // 1. Pre-computation and Validation
+  if (token.isEmpty) {
+    log(LogLevel.ERROR, 'Auth token is empty.');
+    throw Exception('Auth token cannot be empty.');
+  }
+  if (baseUrl.isEmpty) {
+    log(LogLevel.ERROR, 'Base URL is empty.');
+    throw Exception('Base URL cannot be empty.');
+  }
+
   Uri uri;
   try {
     uri = Uri.parse(baseUrl);
-    print('URI parsed successfully: $uri');
+    log(LogLevel.DEBUG, 'URI parsed successfully: $uri');
   } catch (e) {
-    print('Error parsing URI: ${e.toString()}');
-    throw Exception('URI parsing failed: ${e.toString()}');
+    log(LogLevel.ERROR, 'Error parsing URI: $e');
+    throw Exception('URI parsing failed: $e');
   }
 
-  // Request data preparation block
-  String requestBody;
-  try {
-    Map<String, dynamic> postData = {"idToken": token, "data": {}};
-    requestBody = jsonEncode(postData);
-    print('Request data prepared: $requestBody');
-  } catch (e) {
-    print('Error preparing request data: ${e.toString()}');
-    throw Exception('Request data preparation failed: ${e.toString()}');
-  }
+  final requestBody = jsonEncode({"idToken": token, "data": {}});
+  final headers = {'Content-Type': 'application/json; charset=UTF-8'};
 
-  // Headers preparation block
-  Map<String, String> headers;
-  try {
-    headers = {
-      'Content-Type': 'application/json; charset=UTF-8',
-    };
-    print('Headers prepared: $headers');
-  } catch (e) {
-    print('Error preparing headers: ${e.toString()}');
-    throw Exception('Headers preparation failed: ${e.toString()}');
-  }
+  // 2. Pre-API Call Logging
+  log(LogLevel.INFO, 'Preparing to send HTTP POST request to $uri');
+  log(LogLevel.DEBUG, 'Request Headers: ${jsonEncode(headers)}');
+  log(LogLevel.DEBUG, 'Request Body: $requestBody');
 
-  // HTTP request block
+  // 3. API Call
+  http.Response response;
   try {
-    print('Sending HTTP request...');
     response = await http
         .post(
       uri,
@@ -61,57 +80,51 @@ Future<String> getUser(String token, String baseUrl) async {
         .timeout(
       const Duration(seconds: 30),
       onTimeout: () {
-        print('Request timed out');
-        throw Exception('Request timed out after 30 seconds');
+        log(LogLevel.ERROR, 'Request to $uri timed out after 30 seconds.');
+        throw Exception('Request timed out');
       },
     );
-    print(response.body);
-    print('Response received with status code: ${response.statusCode}');
   } catch (e) {
-    print('Error in HTTP request: ${e.toString()}');
-    throw Exception('HTTP request failed: ${e.toString()}');
+    log(LogLevel.ERROR, 'HTTP request to $uri failed: $e');
+    throw Exception('HTTP request failed: $e');
   }
 
-  // Response handling block
-  try {
-    print('Processing response...');
-    if (response.statusCode == 200) {
-      try {
-        // Try to parse response body
-        responseData = json.decode(response.body);
-        print('Response parsed successfully: $responseData');
-        return "Profile sent successfully: ${response.body}";
-      } catch (e) {
-        print('Could not parse response body: ${e.toString()}');
-        return "Profile sent successfully (response parsing failed)";
-      }
-    } else {
-      String errorMessage;
-      switch (response.statusCode) {
-        case 400:
-          errorMessage = 'Bad request: Invalid data format';
-          break;
-        case 401:
-          errorMessage = 'Unauthorized: Invalid token';
-          break;
-        case 403:
-          errorMessage = 'Forbidden: Insufficient permissions';
-          break;
-        case 404:
-          errorMessage = 'API endpoint not found';
-          break;
-        case 500:
-          errorMessage = 'Server error occurred';
-          break;
-        default:
-          errorMessage = 'Request failed with status: ${response.statusCode}';
-      }
-      throw Exception(errorMessage);
+  // 4. Post-API Call Logging
+  log(LogLevel.INFO, 'Received response from $uri with status code: ${response.statusCode}');
+  log(LogLevel.DEBUG, 'Response Body: ${response.body}');
+
+  // 5. Post-computation and Response Handling
+  if (response.statusCode >= 200 && response.statusCode < 300) {
+    try {
+      final responseData = json.decode(response.body);
+      log(LogLevel.INFO, 'Successfully parsed response data.');
+      log(LogLevel.DEBUG, 'Parsed Response Data: $responseData');
+      return jsonEncode(responseData);
+    } catch (e) {
+      log(LogLevel.WARNING, 'Could not parse response body: $e');
+      // Return the raw body if parsing fails but status is OK
+      return response.body;
     }
-  } catch (e) {
-    print('Error processing response: ${e.toString()}');
-    print('Error processing response: ${response.body}');
-    return response.statusCode.toString();
-    throw Exception('Response processing failed: ${e.toString()}');
+  } else {
+    String errorMessage = 'Request failed with status: ${response.statusCode}';
+    switch (response.statusCode) {
+      case 400:
+        errorMessage = 'Bad request: Invalid data format';
+        break;
+      case 401:
+        errorMessage = 'Unauthorized: Invalid token';
+        break;
+      case 403:
+        errorMessage = 'Forbidden: Insufficient permissions';
+        break;
+      case 404:
+        errorMessage = 'API endpoint not found';
+        break;
+      case 500:
+        errorMessage = 'Server error occurred';
+        break;
+    }
+    log(LogLevel.ERROR, 'API Error: $errorMessage. Response: ${response.body}');
+    throw Exception(errorMessage);
   }
 }

@@ -12,10 +12,10 @@ abstract class FFAppConstants {
   static const String latesticketURL =
       'https://client.knex-app.xyz/api/getLatestTicket';
   static const String cancelTicketUrl =
-      'https://client.knex-app.xyz/api/cancelTicket';
+      'https://client.knex-app.xyz/api/setTicketToCancel';
   static const String setTicketToDeparture =
-      'https://client.knex-app.xyz/api/ticketToDeparture';
-  static const String setTip = 'https://client.knex-app.xyz/api/setTip';
+      'https://client.knex-app.xyz/api/setToDeparture';
+  static const String setTip = 'https://client.knex-app.xyz/api/setTicketTip';
   static const String confirmPaymentURL =
       'https://client.knex-app.xyz/api/confirmPayment';
 }
