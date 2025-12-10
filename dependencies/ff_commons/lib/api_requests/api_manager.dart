@@ -13,8 +13,8 @@ import 'package:mime_type/mime_type.dart';
 
 import 'package:ff_commons/flutter_flow/uploaded_file.dart';
 
-
 import 'get_streamed_response.dart';
+
 enum ApiCallType {
   GET,
   POST,
@@ -63,9 +63,9 @@ class ApiCallOptions extends Equatable {
   final bool isStreamingApi;
 
   /// Creates a new [ApiCallOptions] with optionally updated parameters.
-  /// 
+  ///
   /// This helper function allows creating a copy of the current options while
-  /// selectively modifying specific fields. Any parameter that is not provided 
+  /// selectively modifying specific fields. Any parameter that is not provided
   /// will retain its original value from the current instance.
   ApiCallOptions copyWith({
     String? callName,
@@ -167,9 +167,9 @@ class ApiCallResponse {
   String get exceptionMessage => exception.toString();
 
   /// Creates a new [ApiCallResponse] with optionally updated parameters.
-  /// 
+  ///
   /// This helper function allows creating a copy of the current response while
-  /// selectively modifying specific fields. Any parameter that is not provided 
+  /// selectively modifying specific fields. Any parameter that is not provided
   /// will retain its original value from the current instance.
   ApiCallResponse copyWith({
     dynamic jsonBody,
@@ -229,12 +229,30 @@ class ApiManager {
   // If your API calls need authentication, populate this field once
   // the user has authenticated. Alter this as needed.
   static String? _accessToken;
-    // You may want to call this if, for example, you make a change to the
+  // You may want to call this if, for example, you make a change to the
   // database and no longer want the cached result of a call that may
   // have changed.
   static void clearCache(String callName) => _apiCache.keys
       .toSet()
       .forEach((k) => k.callName == callName ? _apiCache.remove(k) : null);
+
+  // Interceptors to handle responses globally (e.g. for notifications)
+  static final List<void Function(ApiCallResponse, String)> _interceptors = [];
+
+  static void addInterceptor(
+      void Function(ApiCallResponse, String) interceptor) {
+    _interceptors.add(interceptor);
+  }
+
+  static void _runInterceptors(ApiCallResponse response, String callName) {
+    for (var interceptor in _interceptors) {
+      try {
+        interceptor(response, callName);
+      } catch (e) {
+        print('Error in ApiManager interceptor: $e');
+      }
+    }
+  }
 
   static Map<String, String> toStringMap(Map map) =>
       map.map((key, value) => MapEntry(key.toString(), value.toString()));
@@ -438,7 +456,8 @@ class ApiManager {
   Future<ApiCallResponse> call(
     ApiCallOptions options, {
     http.Client? client,
-  }) => makeApiCall(
+  }) =>
+      makeApiCall(
         callName: options.callName,
         apiUrl: options.apiUrl,
         callType: options.callType,
@@ -572,6 +591,8 @@ class ApiManager {
     } catch (e) {
       result = ApiCallResponse(null, {}, -1, exception: e);
     }
+
+    _runInterceptors(result, callName);
 
     return result;
   }

@@ -287,8 +287,8 @@ class _ProfileCreateWidgetState extends State<ProfileCreateWidget> {
                                                           ?.isNotEmpty ??
                                                       false)) &&
                                               ((_model.uploadedLocalFile_uploadData1mc
-                                                          .bytes?.isEmpty ??
-                                                      true)))
+                                                      .bytes?.isEmpty ??
+                                                  true)))
                                             Container(
                                               width: 120.2,
                                               height: 120.2,
@@ -313,9 +313,11 @@ class _ProfileCreateWidgetState extends State<ProfileCreateWidget> {
                                                 shape: BoxShape.circle,
                                               ),
                                             ),
-                                          if ((_model.uploadedLocalFile_uploadData1mc
-                                                      .bytes?.isNotEmpty ??
-                                                  false))
+                                          if ((_model
+                                                  .uploadedLocalFile_uploadData1mc
+                                                  .bytes
+                                                  ?.isNotEmpty ??
+                                              false))
                                             Container(
                                               width: 114.7,
                                               height: 114.7,
@@ -333,9 +335,11 @@ class _ProfileCreateWidgetState extends State<ProfileCreateWidget> {
                                               ),
                                               child: Stack(
                                                 children: [
-                                                  if ((_model.uploadedLocalFile_uploadData1mc
-                                                              .bytes?.isEmpty ??
-                                                          true))
+                                                  if ((_model
+                                                          .uploadedLocalFile_uploadData1mc
+                                                          .bytes
+                                                          ?.isEmpty ??
+                                                      true))
                                                     Container(
                                                       width: 114.7,
                                                       height: 114.7,
@@ -1258,18 +1262,21 @@ class _ProfileCreateWidgetState extends State<ProfileCreateWidget> {
                                 onPressed: () async {
                                   if (_model.isEdited == true) {
                                     if (functions.getkeyfromjsonstring(
-                                                _model.response!, 'photo') ==
-                                            '') {
-                                      if (!((_model.uploadedLocalFile_uploadData1mc
-                                                  .bytes?.isNotEmpty ??
-                                              false))) {
+                                            _model.response!, 'photo') ==
+                                        '') {
+                                      if (!((_model
+                                              .uploadedLocalFile_uploadData1mc
+                                              .bytes
+                                              ?.isNotEmpty ??
+                                          false))) {
                                         _model.errorStateProfileImg = true;
                                         safeSetState(() {});
                                         ScaffoldMessenger.of(context)
                                             .showSnackBar(
                                           SnackBar(
                                             content: Text(
-                                              FloridaMessages.photoRequired(context),
+                                              FloridaMessages.photoRequired(
+                                                  context),
                                               style: TextStyle(
                                                 color:
                                                     FlutterFlowTheme.of(context)
@@ -1302,7 +1309,8 @@ class _ProfileCreateWidgetState extends State<ProfileCreateWidget> {
                                           .showSnackBar(
                                         SnackBar(
                                           content: Text(
-                                            FloridaMessages.stateRequired(context),
+                                            FloridaMessages.stateRequired(
+                                                context),
                                             style: TextStyle(
                                               color:
                                                   FlutterFlowTheme.of(context)
@@ -1318,45 +1326,124 @@ class _ProfileCreateWidgetState extends State<ProfileCreateWidget> {
                                       );
                                       return;
                                     }
-                                    _model.compressedBytes =
-                                        await actions.bytesToCompressedBytes(
-                                      _model.uploadedLocalFile_uploadData1mc,
-                                    );
-                                    _model.imageBytesToBase64 =
-                                        await actions.bytestobase64Action(
-                                      _model.compressedBytes!,
-                                    );
-                                    _model.profileoutput =
-                                        await actions.sendprofile(
-                                      FFAppConstants.createUserURL,
-                                      _model.yourNameTextController.text,
-                                      _model.yourLastNameTextController.text,
-                                      _model.phoneNumberTextController.text,
-                                      currentUserEmail,
-                                      currentJwtToken,
-                                      _model.cityTextController.text,
-                                      _model.imageBytesToBase64!,
-                                      _model.dropDownValue!,
-                                      '${_model.addressTextController.text}, ${_model.zipcodeTextController.text}',
-                                    );
-                                    FFAppState().base64 =
-                                        _model.imageBytesToBase64!;
-                                    safeSetState(() {});
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          _model.profileoutput!,
-                                          style: TextStyle(
-                                            color: FlutterFlowTheme.of(context)
-                                                .primaryText,
+                                    String? photoToSend;
+                                    try {
+                                      if ((_model
+                                              .uploadedLocalFile_uploadData1mc
+                                              .bytes
+                                              ?.isNotEmpty ??
+                                          false)) {
+                                        _model.compressedBytes = await actions
+                                            .bytesToCompressedBytes(
+                                          _model
+                                              .uploadedLocalFile_uploadData1mc,
+                                        );
+                                        _model.imageBytesToBase64 =
+                                            await actions.bytestobase64Action(
+                                          _model.compressedBytes!,
+                                        );
+                                        photoToSend = _model.imageBytesToBase64;
+                                        FFAppState().base64 =
+                                            _model.imageBytesToBase64!;
+                                      } else {
+                                        photoToSend =
+                                            functions.getkeyfromjsonstring(
+                                                _model.response!, 'photo');
+                                      }
+
+                                      _model.profileoutput =
+                                          await actions.sendprofile(
+                                        FFAppConstants.createUserURL,
+                                        _model.yourNameTextController.text,
+                                        _model.yourLastNameTextController.text,
+                                        _model.phoneNumberTextController.text,
+                                        currentUserEmail,
+                                        currentJwtToken,
+                                        _model.cityTextController.text,
+                                        photoToSend!,
+                                        _model.dropDownValue!,
+                                        '${_model.addressTextController.text}, ${_model.zipcodeTextController.text}',
+                                      );
+
+                                      safeSetState(() {});
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            _model.profileoutput!,
+                                            style: TextStyle(
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .primaryText,
+                                            ),
                                           ),
+                                          duration:
+                                              Duration(milliseconds: 4000),
+                                          backgroundColor:
+                                              FlutterFlowTheme.of(context)
+                                                  .secondary,
                                         ),
-                                        duration: Duration(milliseconds: 4000),
-                                        backgroundColor:
-                                            FlutterFlowTheme.of(context)
-                                                .secondary,
-                                      ),
-                                    );
+                                      );
+                                    } catch (e) {
+                                      String exceptionStr = e
+                                          .toString()
+                                          .replaceAll('Exception: ', '');
+                                      String displayMessage =
+                                          'An unexpected error occurred.';
+
+                                      // Check for status code prefix [xxx]
+                                      final statusCodeRegex =
+                                          RegExp(r'^\[(\d+)\]');
+                                      final match = statusCodeRegex
+                                          .firstMatch(exceptionStr);
+
+                                      if (match != null) {
+                                        String statusCode = match.group(1)!;
+                                        String cleanMessage = exceptionStr
+                                            .substring(match.end)
+                                            .trim();
+
+                                        switch (statusCode) {
+                                          case '400':
+                                            displayMessage =
+                                                'Please check your input. $cleanMessage';
+                                            break;
+                                          case '404':
+                                            displayMessage =
+                                                'Service not found. Please contact support.';
+                                            break;
+                                          case '500':
+                                            displayMessage =
+                                                'Server error. Please try again later.';
+                                            break;
+                                          default:
+                                            displayMessage = cleanMessage;
+                                        }
+                                      } else {
+                                        // Fallback for non-API errors
+                                        displayMessage = exceptionStr;
+                                      }
+
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            displayMessage,
+                                            style: TextStyle(
+                                              color:
+                                                  FlutterFlowTheme.of(context)
+                                                      .primaryText,
+                                            ),
+                                          ),
+                                          duration:
+                                              Duration(milliseconds: 4000),
+                                          backgroundColor:
+                                              FlutterFlowTheme.of(context)
+                                                  .error,
+                                        ),
+                                      );
+                                      return;
+                                    }
                                     if (functions.validateResponseProfile(
                                             _model.profileoutput,
                                             'Profile sent') ==
@@ -1387,18 +1474,17 @@ class _ProfileCreateWidgetState extends State<ProfileCreateWidget> {
                                   iconPadding: EdgeInsetsDirectional.fromSTEB(
                                       0.0, 0.0, 0.0, 0.0),
                                   color: valueOrDefault<Color>(
-                                    (_model.yourNameTextController
-                                                        .text ==
-                                                    '') ||
+                                    (_model.yourNameTextController.text ==
+                                                '') ||
                                             (_model.yourLastNameTextController
-                                                        .text ==
-                                                    '') ||
+                                                    .text ==
+                                                '') ||
                                             (_model.addressTextController
-                                                        .text ==
-                                                    '') ||
+                                                    .text ==
+                                                '') ||
                                             (_model.phoneNumberTextController
-                                                        .text ==
-                                                    '')
+                                                    .text ==
+                                                '')
                                         ? Color(0xFF0B1552)
                                         : FlutterFlowTheme.of(context).primary,
                                     Color(0xFF0B1552),

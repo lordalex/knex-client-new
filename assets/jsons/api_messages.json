@@ -1,0 +1,8 @@
+{
+    "500": "Internal Server Error. Please try again later.",
+    "404": "Resource not found.",
+    "401": "Unauthorized access. Please login again.",
+    "403": "Access forbidden.",
+    "400": "Bad request. Please check your input.",
+    "default_error": "An unexpected error occurred."
+}

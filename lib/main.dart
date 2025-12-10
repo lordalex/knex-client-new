@@ -16,6 +16,8 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'index.dart';
 
 import 'backend/stripe/payment_manager.dart';
+import 'backend/notification_service.dart';
+import 'package:ff_commons/api_requests/api_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +34,11 @@ void main() async {
   await appState.initializePersistedState();
 
   await initializeStripe();
+
+  // Initialize Notification Service
+  await NotificationService.initialize();
+  ApiManager.addInterceptor(NotificationService.onApiResponse);
+
   if (!kIsWeb) {
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
   }
