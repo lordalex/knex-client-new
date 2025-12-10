@@ -65,7 +65,7 @@ class KnexFirebaseUser extends BaseAuthUser {
 
 Stream<BaseAuthUser> knexFirebaseUserStream() => FirebaseAuth.instance
         .authStateChanges()
-        .debounce((user) => user == null && !loggedIn
+        .debounce((user) => user == null && currentUser?.loggedIn != true
             ? TimerStream(true, const Duration(seconds: 1))
             : Stream.value(user))
         .map<BaseAuthUser>(

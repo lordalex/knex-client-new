@@ -1,6 +1,7 @@
 import 'package:provider/provider.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
@@ -19,6 +20,11 @@ import 'backend/stripe/payment_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Ensure google_fonts can fetch fonts from network if not bundled locally
+  // This prevents AssetManifest.json errors on iOS when fonts aren't in assets
+  GoogleFonts.config.allowRuntimeFetching = true;
+
   GoRouter.optionURLReflectsImperativeAPIs = true;
   usePathUrlStrategy();
 
@@ -99,6 +105,17 @@ class _MyAppState extends State<MyApp> {
     Future.delayed(
       Duration(milliseconds: 1000),
       () => _appStateNotifier.stopShowingSplashImage(),
+    );
+
+    // Safety timeout: if auth hasn't resolved in 5 seconds, proceed to login
+    Future.delayed(
+      Duration(seconds: 5),
+      () {
+        if (_appStateNotifier.loading) {
+          debugPrint('⚠️ Auth timeout - proceeding to login screen');
+          _appStateNotifier.forceStopLoading();
+        }
+      },
     );
   }
 

@@ -1,5 +1,42 @@
 # KNEX Client - Project Context for Claude
 
+## Recommended Agents
+
+Use these specialized agents for this project:
+
+| Agent | When to Use |
+|-------|-------------|
+| `flutter-expert` | **PRIMARY** - All Flutter/Dart code, FlutterFlow exports, Gradle issues, widget building, state management, debugging Flutter issues |
+| `firebase-realtime-expert` | Firebase Auth, Firestore queries, presence detection, real-time data sync |
+| `Explore` | Finding files, understanding codebase structure, searching for patterns |
+
+**Examples:**
+```
+# For Flutter widget work:
+Use flutter-expert agent to build/fix/debug Flutter components
+
+# For Firebase auth issues:
+Use firebase-realtime-expert agent to debug authentication flow
+
+# For finding code:
+Use Explore agent to find where errors are handled
+```
+
+## MCP Tools
+
+| Tool | When to Use |
+|------|-------------|
+| `context7` | **ALWAYS USE** for looking up Flutter, Firebase, FlutterFlow, Stripe, and other library documentation. Provides up-to-date API references and examples. |
+
+**Example:**
+```
+# Before implementing Firebase Auth:
+Use context7 to look up Firebase Auth Flutter documentation
+
+# Before using a new Flutter widget:
+Use context7 to get current API and usage examples
+```
+
 ## Project Overview
 KNEX is a valet parking service app built with **Flutter** and **FlutterFlow**. The app allows users to request valet services, manage their vehicles, and pay for services including tips via Stripe.
 

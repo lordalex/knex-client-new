@@ -32,6 +32,9 @@ class AppStateNotifier extends ChangeNotifier {
   bool showSplashImage = true;
   String? _redirectLocation;
 
+  /// Timeout flag - if auth takes too long, proceed anyway
+  bool _authTimedOut = false;
+
   /// Determines whether the app will refresh and build again when a sign
   /// in or sign out happens. This is useful when the app is launched or
   /// on an unexpected logout. However, this must be turned off when we
@@ -39,7 +42,15 @@ class AppStateNotifier extends ChangeNotifier {
   /// Otherwise, this will trigger a refresh and interrupt the action(s).
   bool notifyOnAuthChange = true;
 
-  bool get loading => user == null || showSplashImage;
+  /// Loading is false if: splash is done AND (user resolved OR timed out)
+  bool get loading => showSplashImage || (user == null && !_authTimedOut);
+
+  /// Call this if auth takes too long - allows app to proceed to login
+  void forceStopLoading() {
+    _authTimedOut = true;
+    showSplashImage = false;
+    notifyListeners();
+  }
   bool get loggedIn => user?.loggedIn ?? false;
   bool get initiallyLoggedIn => initialUser?.loggedIn ?? false;
   bool get shouldRedirect => loggedIn && _redirectLocation != null;
@@ -397,10 +408,31 @@ class FFRoute {
               : builder(context, ffParams);
           final child = appStateNotifier.loading
               ? Container(
-                  color: Colors.transparent,
-                  child: Image.asset(
-                    'assets/images/knex_splash.png',
-                    fit: BoxFit.contain,
+                  color: Colors.white, // Solid background prevents black screen
+                  child: Center(
+                    child: Image.asset(
+                      'assets/images/knex_splash.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        // Fallback if image fails to load
+                        debugPrint('⚠️ Splash image failed to load: $error');
+                        return Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text(
+                              'KNEX',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
                   ),
                 )
               : page;
