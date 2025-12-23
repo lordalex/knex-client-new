@@ -649,8 +649,32 @@ class _LoginSignUpWidgetState extends State<LoginSignUpWidget>
                                                         return;
                                                       }
 
-                                                      if (FFAppState()
-                                                          .UserProfileCreated) {
+                                                      // Check if user profile exists in backend
+                                                      final searchResponse =
+                                                          await actions
+                                                              .sendjsontourl(
+                                                        '{"searchCriteria": {"email": "${user.email}"}}',
+                                                        currentJwtToken,
+                                                        FFAppConstants
+                                                            .searchUserURL,
+                                                      );
+
+                                                      // 401/404/Empty means user not found or error
+                                                      final bool userExists =
+                                                          searchResponse !=
+                                                                  '401' &&
+                                                              searchResponse !=
+                                                                  '404' &&
+                                                              searchResponse
+                                                                  .isNotEmpty &&
+                                                              searchResponse !=
+                                                                  '[]';
+
+                                                      FFAppState()
+                                                              .UserProfileCreated =
+                                                          userExists;
+
+                                                      if (userExists) {
                                                         context.pushNamedAuth(
                                                             HomePageWidget
                                                                 .routeName,
@@ -1518,7 +1542,9 @@ class _LoginSignUpWidgetState extends State<LoginSignUpWidget>
                                                             .showSnackBar(
                                                           SnackBar(
                                                             content: Text(
-                                                              FloridaMessages.passwordsDontMatch(context),
+                                                              FloridaMessages
+                                                                  .passwordsDontMatch(
+                                                                      context),
                                                             ),
                                                           ),
                                                         );

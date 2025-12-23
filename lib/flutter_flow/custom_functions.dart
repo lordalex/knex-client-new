@@ -715,10 +715,52 @@ bool validateResponseProfile(
   String? jsonCondition,
 ) {
   // validate if jsonResponse has 'Profile sent' in their first characters return true or false
-  if (jsonResponse != null && jsonCondition != null) {
-    return jsonResponse.startsWith(jsonCondition);
+  if (jsonResponse == null || jsonCondition == null) {
+    return false;
   }
-  return false;
+
+  // 1. Try parsing as JSON first
+  try {
+    final decoded = jsonDecode(jsonResponse);
+
+    // Case A: Response is a Map/Object
+    if (decoded is Map<String, dynamic>) {
+      // Check for status code 200 or 201
+      if (decoded.containsKey('status')) {
+        final status = decoded['status'];
+        if (status == 200 ||
+            status == 201 ||
+            status == '200' ||
+            status == '201') {
+          return true;
+        }
+      }
+
+      // Check for explicit success flag
+      if (decoded.containsKey('success') && decoded['success'] == true) {
+        return true;
+      }
+
+      // Check for message field matching condition
+      if (decoded.containsKey('message') &&
+          decoded['message'].toString().startsWith(jsonCondition)) {
+        return true;
+      }
+
+      // Check if the condition exists as a key
+      if (decoded.containsKey(jsonCondition)) {
+        return true;
+      }
+    }
+  } catch (e) {
+    // Not valid JSON, fall through to string check
+    print(
+        'validateResponseProfile: JSON decode failed, falling back to string check. Error: $e');
+  }
+
+  // 2. Fallback to simple string matching (handles plain text responses)
+  // We trim to handle potential leading whitespace or newlines
+  return jsonResponse.trim().startsWith(jsonCondition);
 }
 
 List<String> arrayStringtoStringList(String arrayString) {

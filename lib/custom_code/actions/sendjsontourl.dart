@@ -70,17 +70,10 @@ Future<String> sendjsontourl(
   try {
     dynamic jsonData = json.decode(jsonString);
     Map<String, dynamic> postData;
-    if (baseUrl.contains('searchUser')) {
-      postData = {
-        "idToken": token,
-        "data": jsonData['searchCriteria'],
-      };
-    } else {
-      postData = {
-        "idToken": token,
-        "data": jsonData,
-      };
-    }
+    postData = {
+      "idToken": token,
+      "data": jsonData,
+    };
     requestBody = jsonEncode(postData);
   } catch (e) {
     log(LogLevel.ERROR, 'Error preparing request data: $e');
@@ -151,7 +144,8 @@ Future<({bool success, String? data, String? errorMessage})> sendjsontourlSafe(
     if (statusCode != null && statusCode >= 400) {
       // Use Florida-themed messages for that sunshine state flair!
       // Using static version since we don't have BuildContext here
-      final errorMessage = FloridaMessages.getMessageForStatusCodeStatic(statusCode);
+      final errorMessage =
+          FloridaMessages.getMessageForStatusCodeStatic(statusCode);
       return (success: false, data: null, errorMessage: errorMessage);
     }
 

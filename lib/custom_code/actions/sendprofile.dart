@@ -138,43 +138,43 @@ Future<String> sendprofile(
       log(LogLevel.WARNING, 'Could not parse response body: $e');
       return response.body;
     }
-    String errorMessage = 'Request failed with status: ${response.statusCode}';
-
-    // Attempt to extract specific error message from response body
-    try {
-      final errorJson = json.decode(response.body);
-      if (errorJson is Map<String, dynamic> && errorJson.containsKey('error')) {
-        errorMessage = errorJson['error'].toString();
-      }
-    } catch (_) {
-      // Fallback to generic messages if parsing fails
-    }
-
-    if (errorMessage == 'Request failed with status: ${response.statusCode}') {
-      switch (response.statusCode) {
-        case 400:
-          errorMessage = 'Bad request: Invalid data format';
-          break;
-        case 401:
-          errorMessage = 'Unauthorized: Invalid token';
-          break;
-        case 403:
-          errorMessage = 'Forbidden: Insufficient permissions';
-          break;
-        case 404:
-          errorMessage = 'API endpoint not found';
-          break;
-        case 500:
-          errorMessage = 'Server error occurred';
-          break;
-      }
-    }
-    
-    // Prepend status code for easier handling in UI
-    final finalErrorMessage = '[${response.statusCode}] $errorMessage';
-    
-    log(LogLevel.ERROR, 'API Error: $finalErrorMessage. Response: ${response.body}');
-    throw Exception(finalErrorMessage);
   }
+  String errorMessage = 'Request failed with status: ${response.statusCode}';
+
+  // Attempt to extract specific error message from response body
+  try {
+    final errorJson = json.decode(response.body);
+    if (errorJson is Map<String, dynamic> && errorJson.containsKey('error')) {
+      errorMessage = errorJson['error'].toString();
+    }
+  } catch (_) {
+    // Fallback to generic messages if parsing fails
+  }
+
+  if (errorMessage == 'Request failed with status: ${response.statusCode}') {
+    switch (response.statusCode) {
+      case 400:
+        errorMessage = 'Bad request: Invalid data format';
+        break;
+      case 401:
+        errorMessage = 'Unauthorized: Invalid token';
+        break;
+      case 403:
+        errorMessage = 'Forbidden: Insufficient permissions';
+        break;
+      case 404:
+        errorMessage = 'API endpoint not found';
+        break;
+      case 500:
+        errorMessage = 'Server error occurred';
+        break;
+    }
+  }
+
+  // Prepend status code for easier handling in UI
+  final finalErrorMessage = '[${response.statusCode}] $errorMessage';
+
+  log(LogLevel.ERROR,
+      'API Error: $finalErrorMessage. Response: ${response.body}');
+  throw Exception(finalErrorMessage);
 }
-```

@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
-import 'package:flutter/material.dart';
 import 'package:ff_commons/api_requests/api_manager.dart';
 import 'package:custom_notification_library_68aamd/custom_code/actions/custom_toastification.dart';
 // Depending on how custom_notification_library_68aamd exports nav.dart, check if we need direct import
