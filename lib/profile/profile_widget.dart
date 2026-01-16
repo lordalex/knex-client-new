@@ -653,7 +653,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
                                                         ThemeMode.light);
                                                   }
                                                 },
-                                                activeColor:
+                                                activeThumbColor:
                                                     FlutterFlowTheme.of(context)
                                                         .info,
                                                 activeTrackColor:

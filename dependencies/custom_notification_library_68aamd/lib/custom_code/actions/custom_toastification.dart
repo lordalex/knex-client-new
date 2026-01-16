@@ -1,7 +1,4 @@
 // Automatic FlutterFlow imports
-import 'package:ff_theme/flutter_flow/flutter_flow_theme.dart';
-import '/flutter_flow/flutter_flow_util.dart';
-import 'index.dart'; // Imports other custom actions
 import 'package:flutter/material.dart';
 // Begin custom action code
 // DO NOT REMOVE OR MODIFY THE CODE ABOVE!
@@ -105,10 +102,10 @@ Future<void> customToastification(
         child: child,
       );
     },
-    icon: Icon(Icons.notifications),
+    icon: const Icon(Icons.notifications),
     borderRadius: BorderRadius.circular(12.0),
     boxShadow: [
-      BoxShadow(
+      const BoxShadow(
         color: Colors.black26,
         blurRadius: 10,
         offset: Offset(0, 4),

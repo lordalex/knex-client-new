@@ -74,8 +74,7 @@ String? serializeParam(
       case ParamType.DataStruct:
         data = param is BaseStruct ? param.serialize() : null;
 
-      default:
-        data = null;
+
     }
     return data;
   } catch (e) {
@@ -212,8 +211,7 @@ dynamic deserializeParam<T>(
         final data = json.decode(param) as Map<String, dynamic>? ?? {};
         return structBuilder != null ? structBuilder(data) : null;
 
-      default:
-        return null;
+
     }
   } catch (e) {
     print('Error deserializing parameter: $e');

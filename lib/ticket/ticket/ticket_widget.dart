@@ -1974,9 +1974,7 @@ class _TicketWidgetState extends State<TicketWidget>
                                                                                 FlutterFlowTheme.of(context).primary,
                                                                           ),
                                                                         );
-                                                                        if (_shouldSetState)
-                                                                          safeSetState(
-                                                                              () {});
+
                                                                         return;
                                                                       }
 

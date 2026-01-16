@@ -648,7 +648,7 @@ class _TipBottomSheetWidgetState extends State<TipBottomSheetWidget> {
                                 );
                               },
                             );
-                            if (_shouldSetState) safeSetState(() {});
+
                             return;
                           }
                         }

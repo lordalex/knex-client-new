@@ -680,17 +680,12 @@ class _AddCarsWidgetState extends State<AddCarsWidget> {
                                                                 }
                                                               }
                                                             },
-                                                            side: (FlutterFlowTheme.of(
-                                                                            context)
-                                                                        .alternate !=
-                                                                    null)
-                                                                ? BorderSide(
-                                                                    width: 2,
-                                                                    color: FlutterFlowTheme.of(
-                                                                            context)
-                                                                        .alternate,
-                                                                  )
-                                                                : null,
+                                                            side: BorderSide(
+                                                              width: 2,
+                                                              color: FlutterFlowTheme.of(
+                                                                      context)
+                                                                  .alternate,
+                                                            ),
                                                             activeColor:
                                                                 FlutterFlowTheme.of(
                                                                         context)
@@ -825,17 +820,12 @@ class _AddCarsWidgetState extends State<AddCarsWidget> {
                                                           }
                                                         }
                                                       },
-                                                      side: (FlutterFlowTheme.of(
-                                                                      context)
-                                                                  .alternate !=
-                                                              null)
-                                                          ? BorderSide(
+                                                      side: BorderSide(
                                                               width: 2,
-                                                              color: FlutterFlowTheme
-                                                                      .of(context)
+                                                              color: FlutterFlowTheme.of(
+                                                                      context)
                                                                   .alternate,
-                                                            )
-                                                          : null,
+                                                            ),
                                                       activeColor:
                                                           FlutterFlowTheme.of(
                                                                   context)

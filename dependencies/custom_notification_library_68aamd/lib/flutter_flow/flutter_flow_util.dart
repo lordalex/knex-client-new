@@ -13,7 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../main.dart';
 
-import 'package:ff_commons/flutter_flow/lat_lng.dart';
+
 
 export 'package:ff_commons/flutter_flow/lat_lng.dart';
 export 'package:ff_commons/flutter_flow/place.dart';
@@ -160,19 +160,15 @@ T? castToType<T>(dynamic value) {
   if (value == null) {
     return null;
   }
-  switch (T) {
-    case double:
-      // Doubles may be stored as ints in some cases.
-      return value.toDouble() as T;
-    case int:
-      // Likewise, ints may be stored as doubles. If this is the case
-      // (i.e. no decimal value), return the value as an int.
-      if (value is num && value.toInt() == value) {
-        return value.toInt() as T;
-      }
-      break;
-    default:
-      break;
+  if (T == double) {
+    // Doubles may be stored as ints in some cases.
+    return value.toDouble() as T;
+  } else if (T == int) {
+    // Likewise, ints may be stored as doubles. If this is the case
+    // (i.e. no decimal value), return the value as an int.
+    if (value is num && value.toInt() == value) {
+      return value.toInt() as T;
+    }
   }
   return value as T;
 }
@@ -280,12 +276,12 @@ void showSnackbar(
       content: Row(
         children: [
           if (loading)
-            Padding(
+            const Padding(
               padding: EdgeInsetsDirectional.only(end: 10.0),
-              child: Container(
+              child: SizedBox(
                 height: 20,
                 width: 20,
-                child: const CircularProgressIndicator(
+                child: CircularProgressIndicator(
                   color: Colors.white,
                 ),
               ),
