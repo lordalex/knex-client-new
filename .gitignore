@@ -33,3 +33,7 @@ ios/.symlinks/
 *.app
 .env
 lib/generated_plugin_registrant.dart
+
+# Local configuration
+CLAUDE.md
+CLAUDE.md.backup
