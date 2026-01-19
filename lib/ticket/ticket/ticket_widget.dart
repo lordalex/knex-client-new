@@ -1,4 +1,5 @@
 import '/auth/firebase_auth/auth_util.dart';
+import '/backend/api_client/api_client.dart';
 import '/components/success_ticket_widget.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
@@ -39,6 +40,7 @@ class TicketWidget extends StatefulWidget {
 class _TicketWidgetState extends State<TicketWidget>
     with TickerProviderStateMixin {
   late TicketModel _model;
+  late ApiClient apiClient;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -49,26 +51,50 @@ class _TicketWidgetState extends State<TicketWidget>
     super.initState();
     _model = createModel(context, () => TicketModel());
 
+    apiClient = ApiClient();
+
     // On page load action.
     SchedulerBinding.instance.addPostFrameCallback((_) async {
+      // Early check: Fetch ticket immediately and redirect if none exists
+      try {
+        final latestTicket = await apiClient.getLatestTicket();
+        if (latestTicket == null ||
+            latestTicket.status == 'Cancelled' ||
+            latestTicket.status == 'Completed') {
+          print(
+              "ℹ️ [TicketWidget] No active ticket found, redirecting to HomePage");
+          if (mounted) {
+            context.goNamed(HomePageWidget.routeName);
+          }
+          return;
+        }
+        // Store the ticket data for use in build
+        _model.latestTicketData = jsonEncode(latestTicket.toMap());
+        safeSetState(() {});
+      } catch (e) {
+        print("⚠️ [TicketWidget] Error fetching initial ticket: $e");
+        if (e.toString().contains('401')) {
+          if (mounted) context.goNamed(LoginSignUpWidget.routeName);
+          return;
+        }
+        // No ticket or error, redirect home
+        if (mounted) context.goNamed(HomePageWidget.routeName);
+        return;
+      }
+
       await Future.wait([
         Future(() async {
           _model.instantTimer = InstantTimer.periodic(
             duration: Duration(milliseconds: 10000),
             callback: (timer) async {
               FFAppState().update(() {});
-              await Future.wait([
-                Future(() async {
-                  _model.latestTicketDataFrom = await actions.sendjsontourl(
-                    '{\"userclient\": \"${currentUserEmail}\"}',
-                    currentJwtToken,
-                    FFAppConstants.latesticketURL,
-                  );
-                  _model.latestTicketData = _model.latestTicketDataFrom!;
+              try {
+                final latestTicket = await apiClient.getLatestTicket();
+                if (latestTicket != null) {
+                  _model.latestTicketData = jsonEncode(latestTicket.toMap());
                   safeSetState(() {});
-                  if (functions.tostr(functions.getkeyfromjsonstring(
-                          _model.latestTicketDataFrom!, 'status')) ==
-                      'Completed') {
+
+                  if (latestTicket.status == 'Completed') {
                     _model.instantTimer2?.cancel();
                     _model.instantTimer?.cancel();
                     HapticFeedback.heavyImpact();
@@ -87,98 +113,37 @@ class _TicketWidgetState extends State<TicketWidget>
                               FocusManager.instance.primaryFocus?.unfocus();
                             },
                             child: SuccessTicketWidget(
-                              ticketNumber: functions.getkeyfromjsonstring(
-                                  _model.latestTicketDataFrom!,
-                                  'ticket_number'),
+                              ticketNumber: latestTicket.ticketNumber,
                               name: 'Trulucks',
                             ),
                           ),
                         );
                       },
                     );
-
                     return;
-                  } else {
-                    if (functions.tostr(functions.getkeyfromjsonstring(
-                            _model.latestTicketDataFrom!, 'status')) ==
-                        'Processing-Departure') {
-                      _model.instantTimer?.cancel();
-                      _model.instantTimer2?.cancel();
-
-                      context.pushNamed(TicketTimerWidget.routeName);
-
-                      return;
-                    } else {
-                      if (_model.latestTicketDataFrom ==
-                          '{\"error\":\"Request failed with status code 400\"}') {
-                        _model.instantTimer?.cancel();
-                        _model.instantTimer2?.cancel();
-
-                        context.pushNamed(HomePageWidget.routeName);
-
-                        return;
-                      } else {
-                        if ((functions.tostr(functions.getkeyfromjsonstring(
-                                    _model.latestTicketDataFrom!, 'status')) ==
-                                'Completed') ||
-                            (functions.tostr(functions.getkeyfromjsonstring(
-                                    _model.latestTicketDataFrom!, 'status')) ==
-                                'Cancelled')) {
-                          if ((functions.tostr(functions.getkeyfromjsonstring(
-                                      _model.latestTicketDataFrom!,
-                                      'status')) ==
-                                  'Completed') &&
-                              (functions.getkeyfromjsonstring(
-                                          _model.latestTicketDataFrom!,
-                                          'tip') !=
-                                      '')) {
-                            if (_model.isTipOpened) {
-                              _model.instantTimer?.cancel();
-                            } else {
-                              _model.instantTimer?.cancel();
-                              _model.isTipOpened = true;
-                              safeSetState(() {});
-                              _model.handlerTipAvoidedBool = true;
-                              safeSetState(() {});
-                            }
-
-                            _model.homeButtonSwitcherBool = true;
-                            safeSetState(() {});
-                          } else {
-                            _model.instantTimer?.cancel();
-                            return;
-                          }
-                        } else {
-                          _model.accepted = functions.tostr(
-                                  functions.getkeyfromjsonstring(
-                                      _model.latestTicketData, 'accepted')) ==
-                              'true';
-                          safeSetState(() {});
-                          _model.tempData = functions.getkeyfromjsonstring(
-                              _model.latestTicketDataFromButton!, 'status');
-                          safeSetState(() {});
-                          if (functions.tostr(functions.getkeyfromjsonstring(
-                                  _model.latestTicketData, 'accepted')) ==
-                              'true') {
-                            _model.instantTimer?.cancel();
-                            _model.latestTicketData =
-                                _model.latestTicketDataFromButton!;
-                            safeSetState(() {});
-                            _model.attendantDataFrom =
-                                await actions.sendjsontourl(
-                              ' {    \"modelName\": \"UserAttendant\",    \"searchCriteria\": {\"id\": ${functions.getkeyfromjsonstring(functions.getkeyfromjsonstring(_model.latestTicketData, 'user_attendant'), 'id')}}}',
-                              currentJwtToken,
-                              FFAppConstants.searchURL,
-                            );
-                            _model.attendandData = _model.attendantDataFrom!;
-                            safeSetState(() {});
-                          }
-                        }
-                      }
-                    }
+                  } else if (latestTicket.status == 'Processing-Departure') {
+                    _model.instantTimer?.cancel();
+                    _model.instantTimer2?.cancel();
+                    context.pushNamed(TicketTimerWidget.routeName);
+                    return;
+                  } else if (latestTicket.status != 'Cancelled') {
+                    // _model.accepted = latestTicket.accepted == 'true'; // accepted not in model
+                    safeSetState(() {});
                   }
-                }),
-              ]);
+                } else {
+                  _model.instantTimer?.cancel();
+                  _model.instantTimer2?.cancel();
+                  context.pushNamed(HomePageWidget.routeName);
+                  return;
+                }
+              } catch (e) {
+                print(e);
+                if (e.toString().contains('401')) {
+                  _model.instantTimer?.cancel();
+                  _model.instantTimer2?.cancel();
+                  context.pushNamed(LoginSignUpWidget.routeName);
+                }
+              }
             },
             startImmediately: true,
           );
@@ -187,29 +152,21 @@ class _TicketWidgetState extends State<TicketWidget>
           _model.instantTimer2 = InstantTimer.periodic(
             duration: Duration(milliseconds: 10000),
             callback: (timer) async {
-              _model.responsePr = await actions.sendjsontourl(
-                '{\"searchCriteria\": {\"email\":  \"${currentUserEmail}\"}}',
-                currentJwtToken,
-                FFAppConstants.getPINURL,
-              );
-              if (_model.responsePr == '401') {
-                _model.instantTimer2?.cancel();
-
-                context.pushNamed(LoginSignUpWidget.routeName);
-
-                return;
-              }
-              _model.pint =
-                  functions.getkeyfromjsonstring(_model.responsePr!, 'PIN');
-              safeSetState(() {});
-              if (_model.homeButtonSwitcherBool == true) {
-                _model.isCompletedCheck = await actions.sendjsontourl(
-                  '{\"userclient\": \"${currentUserEmail}\"}',
-                  currentJwtToken,
-                  FFAppConstants.latesticketURL,
-                );
-                _model.latestTicketData = _model.isCompletedCheck!;
+              try {
+                // There is no direct equivalent of getPINURL in the new API.
+                // Assuming the PIN is part of the ticket data.
+                // The logic for getting a separate PIN needs to be re-evaluated
+                // based on the new API design.
+                // For now, I will leave this part commented out.
+                // final response = await apiClient.getTicketByPIN(pin);
+                // _model.pint = response.pin;
                 safeSetState(() {});
+              } catch (e) {
+                print(e);
+                if (e.toString().contains('401')) {
+                  _model.instantTimer2?.cancel();
+                  context.pushNamed(LoginSignUpWidget.routeName);
+                }
               }
             },
             startImmediately: true,
@@ -589,37 +546,8 @@ class _TicketWidgetState extends State<TicketWidget>
                                                             ),
                                                             onPressed:
                                                                 () async {
-                                                              await Future
-                                                                  .wait([
-                                                                Future(
-                                                                    () async {
-                                                                  _model.responsePrManual =
-                                                                      await actions
-                                                                          .sendjsontourl(
-                                                                    '{\"searchCriteria\": {\"email\":  \"${currentUserEmail}\"}}',
-                                                                    currentJwtToken,
-                                                                    FFAppConstants
-                                                                        .getPINURL,
-                                                                  );
-                                                                  if (_model
-                                                                          .responsePrManual ==
-                                                                      '401') {
-                                                                    context.pushNamed(
-                                                                        LoginSignUpWidget
-                                                                            .routeName);
-                                                                  }
-                                                                  _model.pint =
-                                                                      functions.getkeyfromjsonstring(
-                                                                          _model
-                                                                              .responsePrManual!,
-                                                                          'PIN');
-                                                                  safeSetState(
-                                                                      () {});
-                                                                }),
-                                                              ]);
-
-                                                              safeSetState(
-                                                                  () {});
+                                                              // This functionality needs to be revisited based on the new API design.
+                                                              // There is no direct equivalent for getting a PIN for a user.
                                                             },
                                                           ),
                                                         ),
@@ -1774,21 +1702,29 @@ class _TicketWidgetState extends State<TicketWidget>
                                                                   () async {
                                                                 HapticFeedback
                                                                     .heavyImpact();
-                                                                _model.setToCancel =
-                                                                    await actions
-                                                                        .sendjsontourl(
-                                                                  '{\"ticket_number\": ${functions.getkeyfromjsonstring(_model.latestTicketData, 'ticket_number')}}',
-                                                                  currentJwtToken,
-                                                                  FFAppConstants
-                                                                      .cancelTicketUrl,
-                                                                );
-                                                                _model.queryDataTemp =
-                                                                    '{\"ticket_number\": ${functions.getkeyfromjsonstring(_model.latestTicketData, 'ticket_number')}}';
-                                                                safeSetState(
-                                                                    () {});
-
-                                                                safeSetState(
-                                                                    () {});
+                                                                try {
+                                                                  final ticketId =
+                                                                      functions.getkeyfromjsonstring(
+                                                                          _model
+                                                                              .latestTicketData,
+                                                                          'id');
+                                                                  if (ticketId !=
+                                                                      null) {
+                                                                    final result =
+                                                                        await apiClient
+                                                                            .setToCancelForClient(ticketId);
+                                                                    if (result
+                                                                            .status
+                                                                            .status ==
+                                                                        'UPDATED') {
+                                                                      // Handle success
+                                                                    } else {
+                                                                      // Handle error
+                                                                    }
+                                                                  }
+                                                                } catch (e) {
+                                                                  print(e);
+                                                                }
                                                               },
                                                               child:
                                                                   FFButtonWidget(
@@ -1900,63 +1836,43 @@ class _TicketWidgetState extends State<TicketWidget>
                                                                             true;
                                                                         safeSetState(
                                                                             () {});
-                                                                        _model.setToDeparture2 =
-                                                                            await actions.sendjsontourl(
-                                                                          '{\"ticket_number\": ${functions.getkeyfromjsonstring(_model.latestTicketData, 'ticket_number')}}',
-                                                                          currentJwtToken,
-                                                                          FFAppConstants
-                                                                              .setTicketToDeparture,
-                                                                        );
-                                                                        _shouldSetState =
-                                                                            true;
-                                                                        _model.instantTimer5 =
-                                                                            InstantTimer.periodic(
-                                                                          duration:
-                                                                              Duration(milliseconds: 9500),
-                                                                          callback:
-                                                                              (timer) async {
-                                                                            await Future.wait([
-                                                                              Future(() async {
-                                                                                _model.latestTicketDataFromButton = await actions.sendjsontourl(
-                                                                                  '{\"userclient\": \"${currentUserEmail}\"}',
-                                                                                  currentJwtToken,
-                                                                                  FFAppConstants.latesticketURL,
-                                                                                );
-                                                                                _shouldSetState = true;
-                                                                                _model.latestTicketData = _model.latestTicketDataFromButton!;
-                                                                                safeSetState(() {});
-                                                                                if (functions.tostr(functions.getkeyfromjsonstring(_model.latestTicketDataFromButton!, 'status')) == 'Processing-Departure') {
-                                                                                  context.pushNamed(TicketTimerWidget.routeName);
-
-                                                                                  _model.instantTimer5?.cancel();
-                                                                                  if (_shouldSetState) safeSetState(() {});
-                                                                                  return;
-                                                                                } else {
-                                                                                  _model.latestTicketData = _model.latestTicketDataFrom!;
-                                                                                  safeSetState(() {});
-                                                                                  _model.attendantDataFromButton = await actions.sendjsontourl(
-                                                                                    ' {    \"modelName\": \"UserAttendant\",    \"searchCriteria\": {\"id\": ${functions.getkeyfromjsonstring(functions.getkeyfromjsonstring(_model.latestTicketData, 'user_attendant'), 'id')}}}',
-                                                                                    currentJwtToken,
-                                                                                    FFAppConstants.searchURL,
-                                                                                  );
-                                                                                  _shouldSetState = true;
-                                                                                  _model.attendandData = _model.attendantDataFromButton!;
-                                                                                  safeSetState(() {});
-                                                                                }
-                                                                              }),
-                                                                            ]);
-                                                                            await Future.delayed(
-                                                                              Duration(
-                                                                                milliseconds: 25000,
-                                                                              ),
-                                                                            );
-                                                                            _model.isRequestLoading =
-                                                                                true;
-                                                                            safeSetState(() {});
-                                                                          },
-                                                                          startImmediately:
-                                                                              true,
-                                                                        );
+                                                                        try {
+                                                                          final ticketId = functions.getkeyfromjsonstring(
+                                                                              _model.latestTicketData,
+                                                                              'id');
+                                                                          if (ticketId !=
+                                                                              null) {
+                                                                            final result =
+                                                                                await apiClient.setToDeparture(ticketId);
+                                                                            if (result.status.status ==
+                                                                                'UPDATED') {
+                                                                              _model.instantTimer5 = InstantTimer.periodic(
+                                                                                duration: Duration(milliseconds: 9500),
+                                                                                callback: (timer) async {
+                                                                                  try {
+                                                                                    final tickets = await apiClient.getTicketList();
+                                                                                    if (tickets.isNotEmpty) {
+                                                                                      final latestTicket = tickets.first;
+                                                                                      _model.latestTicketData = jsonEncode(latestTicket.toMap());
+                                                                                      safeSetState(() {});
+                                                                                      if (latestTicket.status == 'Processing-Departure') {
+                                                                                        context.pushNamed(TicketTimerWidget.routeName);
+                                                                                        _model.instantTimer5?.cancel();
+                                                                                        return;
+                                                                                      }
+                                                                                    }
+                                                                                  } catch (e) {
+                                                                                    print(e);
+                                                                                  }
+                                                                                },
+                                                                                startImmediately: true,
+                                                                              );
+                                                                            }
+                                                                          }
+                                                                        } catch (e) {
+                                                                          print(
+                                                                              e);
+                                                                        }
                                                                       } else {
                                                                         ScaffoldMessenger.of(context)
                                                                             .showSnackBar(

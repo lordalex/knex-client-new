@@ -1,4 +1,5 @@
 import '/auth/firebase_auth/auth_util.dart';
+import '/backend/api_client/api_client.dart';
 import '/components/tip_bottom_sheet_widget.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
@@ -33,6 +34,7 @@ class TicketTimerWidget extends StatefulWidget {
 class _TicketTimerWidgetState extends State<TicketTimerWidget>
     with TickerProviderStateMixin {
   late TicketTimerModel _model;
+  late ApiClient apiClient;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
   late StreamSubscription<bool> _keyboardVisibilitySubscription;
@@ -45,41 +47,34 @@ class _TicketTimerWidgetState extends State<TicketTimerWidget>
     super.initState();
     _model = createModel(context, () => TicketTimerModel());
 
+    apiClient = ApiClient();
+
     // On page load action.
     SchedulerBinding.instance.addPostFrameCallback((_) async {
       _model.timerController.onStartTimer();
       _model.instantTimerTicket = InstantTimer.periodic(
         duration: Duration(milliseconds: 9500),
         callback: (timer) async {
-          _model.responsePIN = await actions.sendjsontourl(
-            '{\"searchCriteria\": {\"email\":  \"${currentUserEmail}\"}}',
-            currentJwtToken,
-            FFAppConstants.getPINURL,
-          );
-          _model.latestTicketDataFrom = await actions.sendjsontourl(
-            '{\"userclient\": \"${currentUserEmail}\"}',
-            currentJwtToken,
-            FFAppConstants.latesticketURL,
-          );
-          _model.laestTicketData = _model.latestTicketDataFrom!;
-          safeSetState(() {});
-          if (functions.tostr(functions.getkeyfromjsonstring(
-                  _model.latestTicketDataFrom!, 'status')) !=
-              'Processing-Departure') {
-            context.pushNamed(TicketWidget.routeName);
-
-            _model.instantTimerTicket?.cancel();
-            return;
+          try {
+            // final pinResponse = await apiClient.get... // No equivalent for getPINURL
+            final latestTicket = await apiClient.getLatestTicket();
+            if (latestTicket != null) {
+              _model.laestTicketData = jsonEncode(latestTicket.toMap());
+              safeSetState(() {});
+              if (latestTicket.status != 'Processing-Departure') {
+                context.pushNamed(TicketWidget.routeName);
+                _model.instantTimerTicket?.cancel();
+                return;
+              }
+            }
+          } catch (e) {
+            print(e);
+            if (e.toString().contains('401')) {
+              context.pushNamed(LoginSignUpWidget.routeName);
+              _model.instantTimerTicket?.cancel();
+              return;
+            }
           }
-          if (_model.responsePIN == '401') {
-            context.pushNamed(LoginSignUpWidget.routeName);
-
-            _model.instantTimerTicket?.cancel();
-            return;
-          }
-          _model.pint =
-              functions.getkeyfromjsonstring(_model.responsePIN!, 'PIN');
-          safeSetState(() {});
         },
         startImmediately: true,
       );

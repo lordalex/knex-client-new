@@ -177,6 +177,7 @@ class _NavBarPageState extends State<NavBarPage> {
     super.initState();
     _currentPageName = widget.initialPage ?? _currentPageName;
     _currentPage = widget.page;
+    print("🔍 [NavBarPage] initState. Initial Page: $_currentPageName");
   }
 
   @override
@@ -186,6 +187,8 @@ class _NavBarPageState extends State<NavBarPage> {
       'Profile': ProfileWidget(),
     };
     final currentIndex = tabs.keys.toList().indexOf(_currentPageName);
+    print(
+        "🏗️ [NavBarPage] build executed. CurrentPageName: $_currentPageName, Tab Widget: ${tabs[_currentPageName]}");
 
     return Scaffold(
       resizeToAvoidBottomInset: !widget.disableResizeToAvoidBottomInset,

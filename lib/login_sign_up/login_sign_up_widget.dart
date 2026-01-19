@@ -3,6 +3,7 @@ import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/custom_code/actions/index.dart' as actions;
+import '/utils/flow_manager.dart';
 import '/index.dart';
 import '/utils/florida_messages.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -649,44 +650,19 @@ class _LoginSignUpWidgetState extends State<LoginSignUpWidget>
                                                         return;
                                                       }
 
-                                                      // Check if user profile exists in backend
-                                                      final searchResponse =
-                                                          await actions
-                                                              .sendjsontourl(
-                                                        '{"searchCriteria": {"email": "${user.email}"}}',
-                                                        currentJwtToken,
-                                                        FFAppConstants
-                                                            .searchUserURL,
-                                                      );
+                                                      // Determine next route via FlowManager
+                                                      // This handles checking profile completeness and active tickets
+                                                      final nextRoute =
+                                                          await FlowManager
+                                                              .determineInitialRoute(
+                                                                  currentJwtToken,
+                                                                  user.email!);
 
-                                                      // 401/404/Empty means user not found or error
-                                                      final bool userExists =
-                                                          searchResponse !=
-                                                                  '401' &&
-                                                              searchResponse !=
-                                                                  '404' &&
-                                                              searchResponse
-                                                                  .isNotEmpty &&
-                                                              searchResponse !=
-                                                                  '[]';
-
-                                                      FFAppState()
-                                                              .UserProfileCreated =
-                                                          userExists;
-
-                                                      if (userExists) {
-                                                        context.pushNamedAuth(
-                                                            HomePageWidget
-                                                                .routeName,
-                                                            context.mounted);
-                                                      } else {
-                                                        // si el usuario esta completo mandalo a home
-
-                                                        context.pushNamedAuth(
-                                                            ProfileCreateWidget
-                                                                .routeName,
-                                                            context.mounted);
-                                                      }
+                                                      print(
+                                                          "✅ [LoginSignUp] determined next route: $nextRoute");
+                                                      context.pushNamedAuth(
+                                                          nextRoute,
+                                                          context.mounted);
                                                     },
                                                     text: FFLocalizations.of(
                                                             context)

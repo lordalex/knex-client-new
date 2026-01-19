@@ -48,7 +48,8 @@ Future<String> sendprofile(
     String city,
     String photo,
     String state,
-    String address) async {
+    String address,
+    String zipCode) async {
   log(LogLevel.INFO, 'Starting sendprofile function...');
 
   // 1. Pre-computation and Validation
@@ -57,10 +58,10 @@ Future<String> sendprofile(
     'firstName': firstName,
     'lastName': lastName,
     'phone': phone,
-    'photo': photo,
     'token': token,
     'address': address,
     'baseUrl': baseUrl,
+    'zipCode': zipCode,
   };
 
   for (var entry in params.entries) {
@@ -71,14 +72,15 @@ Future<String> sendprofile(
   }
 
   final profile = {
-    "firstname": firstName,
-    "lastname": lastName,
+    "firstName": firstName,
+    "lastName": lastName,
     "email": email,
-    "phone": phone,
+    "phoneNumber": phone,
     "photo": photo,
     "address": address,
     "state": state,
-    "city": city
+    "city": city,
+    "zipCode": zipCode
   };
 
   Uri uri;

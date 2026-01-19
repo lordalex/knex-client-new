@@ -1,3 +1,5 @@
+import '/backend/api_client/api_client.dart';
+import '/backend/api_client/models/index.dart' as models;
 import '/auth/firebase_auth/auth_util.dart';
 import '/flutter_flow/flutter_flow_expanded_image_view.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
@@ -12,6 +14,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:collection/collection.dart';
 import 'site_details_model.dart';
 export 'site_details_model.dart';
 
@@ -44,21 +47,23 @@ class _SiteDetailsWidgetState extends State<SiteDetailsWidget> {
 
     // On page load action.
     SchedulerBinding.instance.addPostFrameCallback((_) async {
-      _model.sitedetails = await actions.sendjsontourl(
-        '{\"modelName\": \"Site\",\"searchCriteria\": {\"id\": ${widget.id}}}',
-        currentJwtToken,
-        FFAppConstants.searchURL,
-      );
-      _model.name = functions.getkeyfromjsonstring(_model.sitedetails!, 'name');
-      _model.company =
-          functions.getkeyfromjsonstring(_model.sitedetails!, 'Company');
-      _model.address =
-          functions.getkeyfromjsonstring(_model.sitedetails!, 'Address');
-      _model.bio = functions.getkeyfromjsonstring(_model.sitedetails!, 'bio');
-      safeSetState(() {});
-      _model.businessImage = functions.tostr(
-          functions.getkeyfromjsonstring(_model.sitedetails!, 'imageURL'));
-      safeSetState(() {});
+      try {
+        final apiClient = ApiClient();
+        final locations = await apiClient.getLocations();
+        final location =
+            locations.firstWhereOrNull((loc) => loc.id == widget.id);
+        if (location != null) {
+          _model.name = location.name;
+          _model.address = location.address ?? '';
+          // Bio, company and businessImage are not in the new model
+          _model.bio = '';
+          _model.company = '';
+          _model.businessImage = '';
+          safeSetState(() {});
+        }
+      } catch (e) {
+        print(e);
+      }
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));

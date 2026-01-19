@@ -693,25 +693,25 @@ class _TipBottomSheetWidgetState extends State<TipBottomSheetWidget> {
                       _model.paymentId = paymentResponse.paymentId ?? '';
 
                       _shouldSetState = true;
-                      _model.paymentIdResult = await actions.sendjsontourl(
-                        '{\"ticket_number\": ${widget.ticketNumber},\"paymentIntent\": \"${_model.paymentId}\"}',
-                        currentJwtToken,
-                        FFAppConstants.confirmPaymentURL,
-                      );
-                      _shouldSetState = true;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'stripeOutput: ${_model.paymentId}| paymentOutput: ${_model.paymentIdResult}| bodyPaymentOp: ${'{\"ticket_number\": ${widget.ticketNumber},\"paymentIntent\": \"${_model.paymentId}\" }'}',
-                            style: TextStyle(
-                              color: Colors.black,
-                            ),
-                          ),
-                          duration: Duration(milliseconds: 4000),
-                          backgroundColor:
-                              FlutterFlowTheme.of(context).secondary,
-                        ),
-                      );
+                      // _model.paymentIdResult = await actions.sendjsontourl(
+                      //   '{\"ticket_number\": ${widget.ticketNumber},\"paymentIntent\": \"${_model.paymentId}\"}',
+                      //   currentJwtToken,
+                      //   FFAppConstants.confirmPaymentURL,
+                      // );
+                      // _shouldSetState = true;
+                      // ScaffoldMessenger.of(context).showSnackBar(
+                      //   SnackBar(
+                      //     content: Text(
+                      //       'stripeOutput: ${_model.paymentId}| paymentOutput: ${_model.paymentIdResult}| bodyPaymentOp: ${'{\"ticket_number\": ${widget.ticketNumber},\"paymentIntent\": \"${_model.paymentId}\" }'}',
+                      //       style: TextStyle(
+                      //         color: Colors.black,
+                      //       ),
+                      //     ),
+                      //     duration: Duration(milliseconds: 4000),
+                      //     backgroundColor:
+                      //         FlutterFlowTheme.of(context).secondary,
+                      //   ),
+                      // );
                       Navigator.pop(context);
                       if (_shouldSetState) safeSetState(() {});
                     },

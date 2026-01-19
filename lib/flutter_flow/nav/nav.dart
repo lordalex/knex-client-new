@@ -374,6 +374,8 @@ class FFRoute {
         name: name,
         path: path,
         redirect: (context, state) {
+          print(
+              "➡️ [Router] Redirect Check: URL=${state.uri}, Name=${state.name}");
           if (appStateNotifier.shouldRedirect) {
             final redirectLocation = appStateNotifier.getRedirectLocation();
             appStateNotifier.clearRedirectLocation();
@@ -388,6 +390,8 @@ class FFRoute {
         },
         pageBuilder: (context, state) {
           fixStatusBarOniOS16AndBelow(context);
+          print(
+              "🏗️ [Router] Building Page: ${state.name} (Path: ${state.path})");
           final ffParams = FFParameters(state, asyncParams);
           final page = ffParams.hasFutures
               ? FutureBuilder(

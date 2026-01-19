@@ -15,10 +15,9 @@ String getkeyfromjsonstring(
   String string,
   String key,
 ) {
-  print(string);
-  print(key);
-  print("*************");
-  if (string.length < 2) return "";
+  // Early return for empty or very short strings (less noise in logs)
+  if (string.isEmpty || string.length < 2) return "";
+
   try {
     final json = jsonDecode(string);
     if (json is Map) {
@@ -33,7 +32,10 @@ String getkeyfromjsonstring(
       }
     }
   } catch (e) {
-    print("Error decoding JSON: $e");
+    print("Error parsing JSON: $e");
+    print(string);
+    print(key);
+    print("*************");
   }
   return "";
 }
@@ -144,6 +146,17 @@ String tostr(String element) {
 }
 
 String extractTime(String timeStr) {
+  // Early return for empty or invalid input
+  if (timeStr.isEmpty || timeStr.length < 2) {
+    print("⚠️ [extractTime] Empty or invalid input, returning empty object");
+    return jsonEncode({
+      'error': 'EMPTY_INPUT',
+      'message': 'No time data provided',
+      'time': '',
+      'date': ''
+    });
+  }
+
   String timestring;
   try {
     timestring = jsonDecode(timeStr);

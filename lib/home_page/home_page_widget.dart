@@ -8,6 +8,7 @@ import '/flutter_flow/custom_functions.dart' as functions;
 import '/flutter_flow/random_data_util.dart' as random_data;
 import '/index.dart';
 import '/components/error_state_widget.dart';
+import '/utils/flow_manager.dart';
 import '/utils/florida_messages.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:auto_size_text/auto_size_text.dart';
@@ -16,7 +17,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 import 'home_page_model.dart';
 export 'home_page_model.dart';
@@ -24,8 +24,8 @@ export 'home_page_model.dart';
 class HomePageWidget extends StatefulWidget {
   const HomePageWidget({super.key});
 
-  static String routeName = 'HomePage';
-  static String routePath = '/homePage';
+  static String routeName = 'MainHomePage';
+  static String routePath = '/mainHomePage';
 
   @override
   State<HomePageWidget> createState() => _HomePageWidgetState();
@@ -39,14 +39,17 @@ class _HomePageWidgetState extends State<HomePageWidget>
 
   final animationsMap = <String, AnimationInfo>{};
 
+  bool _isLoading = false;
+
   @override
   void initState() {
     super.initState();
+    print("🔍 [HomePage] initState executed");
     _model = createModel(context, () => HomePageModel());
 
     // On page load action.
     SchedulerBinding.instance.addPostFrameCallback((_) async {
-      await _loadPageData();
+      await _safeLoadPageData();
     });
 
     animationsMap.addAll({
@@ -162,147 +165,189 @@ class _HomePageWidgetState extends State<HomePageWidget>
     WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
+  Future<void> _safeLoadPageData() async {
+    if (_isLoading) {
+      print("⚠️ [HomePage] _safeLoadPageData: Already loading, skipping.");
+      return;
+    }
+    if (_model.isLoaded && !_model.hasError) {
+      print(
+          "✅ [HomePage] _safeLoadPageData: Already loaded and no error, skipping.");
+      return;
+    }
+
+    _isLoading = true;
+    print("🔄 [HomePage] _safeLoadPageData: Starting load...");
+    try {
+      await _loadPageData();
+    } catch (e) {
+      print("❌ [HomePage] _safeLoadPageData: Error detected: $e");
+      _isLoading = false;
+    } finally {
+      _isLoading = false;
+      print("🏁 [HomePage] _safeLoadPageData: Finished.");
+    }
+  }
+
   /// Loads all page data with elegant error handling
   Future<void> _loadPageData() async {
+    print("🔍 [HomePage] _loadPageData started");
     try {
       // Reset error state
       _model.hasError = false;
       _model.errorMessage = null;
 
-      await Future.wait([
-        Future(() async {
-          unawaited(
-            () async {
-              await actions.lockOrientation();
-            }(),
-          );
+      // 1. Lock Orientation
+      print("🔍 [HomePage] Step 1/5: Locking Orientation");
+      await actions.lockOrientation();
+      print("✅ [HomePage] Step 1/5 Completed");
 
-          // Search user API call
-          _model.responseR = await actions.sendjsontourl(
-            '{\"searchCriteria\": {\"email\":  \"${currentUserEmail}\"}}',
-            currentJwtToken,
-            FFAppConstants.searchUserURL,
-          );
+      // 2. Search User & Validate Profile (Using FlowManager)
+      print(
+          "🔍 [HomePage] Step 2/5: Fetching & Validating Profile via FlowManager...");
 
-          // Check for auth errors
-          if (_model.responseR == '401') {
-            context.pushNamedAuth(LoginSignUpWidget.routeName, context.mounted);
-            GoRouter.of(context).prepareAuthEvent();
-            await authManager.signOut();
-            GoRouter.of(context).clearRedirectLocation();
-            return;
-          }
+      // Fetch Profile Data
+      Map<String, dynamic> profileMap =
+          await FlowManager.fetchProfileData(currentJwtToken, currentUserEmail);
 
-          // Check for server errors (500, 502, etc.)
-          final statusCode = int.tryParse(_model.responseR ?? '');
-          if (statusCode != null && statusCode >= 400) {
-            throw Exception(_getErrorMessage(statusCode));
-          }
+      // Store in model (legacy compatibility)
+      // Note: FlowManager returns a Map, model.response expects a String (JSON) usually,
+      // but let's see how it was used.
+      // Original: _model.response = parsedProfile; (String)
+      // We should convert back to String if the model expects String, or update Model.
+      // Let's check usage. It prints it: print("Profile parsed: $parsedProfile");
+      // And uses it for: functions.getkeyfromjsonstring(parsedProfile, ...)
+      // To minimize breaking changes, we'll encode it back to string for _model.response
+      _model.response = jsonEncode(profileMap);
+      safeSetState(() {});
 
-          _model.response = functions.getelementsfromjson(_model.responseR!);
-          safeSetState(() {});
+      // Validate Profile
+      String? profileRedirect =
+          await FlowManager.checkProfileCompleteness(profileMap);
+      if (profileRedirect != null) {
+        print(
+            "⚠️ [HomePage] Profile incomplete. Redirecting to $profileRedirect");
+        context.pushNamedAuth(profileRedirect, context.mounted);
+        return;
+      }
+      print("✅ [HomePage] Profile is complete. Proceeding...");
 
-          // Check if profile is complete
-          if (!((functions.getkeyfromjsonstring(_model.responseR!, 'firstname') != '') &&
-              (functions.getkeyfromjsonstring(_model.responseR!, 'lastname') != '') &&
-              (functions.getkeyfromjsonstring(_model.responseR!, 'phone') != '') &&
-              (functions.getkeyfromjsonstring(_model.responseR!, 'address') != ''))) {
-            context.pushNamedAuth(ProfileCreateWidget.routeName, context.mounted);
-            return;
-          }
+      // 3. Get PIN
+      print("🔍 [HomePage] Step 3/5: Fetching PIN...");
+      _model.responseP = await actions.sendjsontourl(
+        '{\"searchCriteria\": {\"email\":  \"${currentUserEmail}\"}}',
+        currentJwtToken,
+        FFAppConstants.getPINURL,
+      );
+      print("✅ [HomePage] Step 3/5: PIN response received");
 
-          // Get PIN API call
-          _model.responseP = await actions.sendjsontourl(
-            '{\"searchCriteria\": {\"email\":  \"${currentUserEmail}\"}}',
-            currentJwtToken,
-            FFAppConstants.getPINURL,
-          );
+      if (_model.responseP == '401') {
+        context.pushNamedAuth(LoginSignUpWidget.routeName, context.mounted);
+        GoRouter.of(context).prepareAuthEvent();
+        await authManager.signOut();
+        GoRouter.of(context).clearRedirectLocation();
+        return;
+      }
 
-          if (_model.responseP == '401') {
-            context.pushNamedAuth(LoginSignUpWidget.routeName, context.mounted);
-            GoRouter.of(context).prepareAuthEvent();
-            await authManager.signOut();
-            GoRouter.of(context).clearRedirectLocation();
-            return;
-          }
+      _model.pin = functions.getelementsfromjson(_model.responseP!);
+      safeSetState(() {});
+      _model.pint = functions.getkeyfromjsonstring(_model.pin, 'PIN');
+      safeSetState(() {});
 
-          _model.pin = functions.getelementsfromjson(_model.responseP!);
-          safeSetState(() {});
-          _model.pint = functions.getkeyfromjsonstring(_model.pin, 'PIN');
-          safeSetState(() {});
+      // 4. Search Sites
+      print("🔍 [HomePage] Step 4/5: Fetching Sites...");
+      _model.responseQ = await actions.sendjsontourl(
+        '{    \"modelName\": \"Site\",    \"searchCriteria\": {}  }',
+        currentJwtToken,
+        FFAppConstants.searchModelURL,
+      );
+      print("✅ [HomePage] Step 4/5: Sites response received");
 
-          // Search sites API call
-          _model.responseQ = await actions.sendjsontourl(
-            '{    \"modelName\": \"Site\",    \"searchCriteria\": {}  }',
-            currentJwtToken,
-            FFAppConstants.searchURL,
-          );
+      if (_model.responseQ == '401') {
+        context.pushNamedAuth(LoginSignUpWidget.routeName, context.mounted);
+        GoRouter.of(context).prepareAuthEvent();
+        await authManager.signOut();
+        GoRouter.of(context).clearRedirectLocation();
+        return;
+      }
 
-          if (_model.responseQ == '401') {
-            context.pushNamedAuth(LoginSignUpWidget.routeName, context.mounted);
-            GoRouter.of(context).prepareAuthEvent();
-            await authManager.signOut();
-            GoRouter.of(context).clearRedirectLocation();
-            return;
-          }
+      _model.sites =
+          functions.jsontoarray(_model.responseQ!).toList().cast<String>();
+      safeSetState(() {});
 
-          _model.sites = functions.jsontoarray(_model.responseQ!).toList().cast<String>();
-          safeSetState(() {});
+      try {
+        _model.sitesWithDistance = await actions
+            .sortstringarraybyargs(
+          _model.sites.toList(),
+          'coordinates_latitude',
+          'coordinates_longitude',
+          'distance',
+          FFAppState().distanceUnit,
+          FFAppState().sorAscending,
+          4,
+          FFAppState().sortBy,
+        )
+            .timeout(const Duration(seconds: 10), onTimeout: () {
+          print(
+              "⚠️ [HomePage] sortstringarraybyargs timed out, using unsorted sites");
+          return _model.sites.toList();
+        });
+      } catch (e) {
+        print("⚠️ [HomePage] Error sorting sites: $e, using unsorted");
+        _model.sitesWithDistance = _model.sites.toList();
+      }
 
-          _model.sitesWithDistance = await actions.sortstringarraybyargs(
-            _model.sites.toList(),
-            'coordinates_latitude',
-            'coordinates_longitude',
-            'distance',
-            FFAppState().distanceUnit,
-            FFAppState().sorAscending,
-            4,
-            FFAppState().sortBy,
-          );
+      // 5. Check Active Ticket (Using FlowManager)
+      print(
+          "🔍 [HomePage] Step 5/5: Checking for active tickets via FlowManager...");
+      String? ticketRedirect = await FlowManager.checkActiveTicket(
+          currentJwtToken, currentUserEmail);
 
-          // Get latest ticket
-          _model.latestTicketDataFrom = await actions.sendjsontourl(
-            '{\"userclient\": \"${currentUserEmail}\"}',
-            currentJwtToken,
-            FFAppConstants.latesticketURL,
-          );
+      if (ticketRedirect != null) {
+        print(
+            "⚠️ [HomePage] Active ticket found. Redirecting to $ticketRedirect");
+        context.pushNamedAuth(ticketRedirect, context.mounted);
+        return;
+      }
 
-          if (!((_model.latestTicketDataFrom ==
-                  '{\"error\":\"Request failed with status code 400\"}') ||
-              (_model.latestTicketDataFrom == '400'))) {
-            if (functions.tostr(functions.getkeyfromjsonstring(
-                    _model.latestTicketDataFrom!, 'status')) !=
-                'Cancelled') {
-              if (functions.tostr(functions.getkeyfromjsonstring(
-                      _model.latestTicketDataFrom!, 'status')) !=
-                  'Completed') {
-                context.pushNamedAuth(TicketWidget.routeName, context.mounted);
-                return;
-              }
-            }
-          }
-        }),
-      ]);
+      // Store dummy data to satisfy any legacy model needs if strictly required,
+      // but FlowManager handles the logic now.
+      // _model.latestTicketDataFrom is used in the condition.
+      // Since we passed the condition, we can assume no blocking ticket.
+      print("✅ [HomePage] No active blocking tickets found.");
 
-      _model.locationL = await actions.location();
-      _model.location = _model.locationL!;
+      print("🔍 [HomePage] Fetching location...");
+      try {
+        _model.locationL = await actions.location().timeout(
+          const Duration(seconds: 5),
+          onTimeout: () {
+            print("⚠️ [HomePage] Location fetch timed out");
+            return ''; // Return empty string on timeout
+          },
+        );
+        _model.location =
+            (_model.locationL != null && _model.locationL!.isNotEmpty)
+                ? _model.locationL!
+                : ' ';
+      } catch (e) {
+        print("⚠️ [HomePage] Error fetching location: $e");
+        _model.location = ' ';
+      }
+
       _model.isLoaded = true;
       safeSetState(() {});
+      print(
+          "✅ [HomePage] Page loaded successfully. isLoaded: ${_model.isLoaded}");
 
       FFAppState().update(() {});
     } catch (e) {
       // Handle errors gracefully
+      print("❌ [HomePage] Error in _loadPageData: $e");
       _model.hasError = true;
       _model.errorMessage = e.toString().replaceAll('Exception: ', '');
       _model.isLoaded = true;
       safeSetState(() {});
     }
-  }
-
-  /// Returns a Florida-themed error message based on status code
-  String _getErrorMessage(int statusCode) {
-    // Use static version when called from _loadPageData (no context available)
-    return FloridaMessages.getMessageForStatusCodeStatic(statusCode);
   }
 
   @override
@@ -315,6 +360,15 @@ class _HomePageWidgetState extends State<HomePageWidget>
   @override
   Widget build(BuildContext context) {
     context.watch<FFAppState>();
+    print(
+        "🏗️ [HomePageWidget] build executed (v2-Trace). isLoaded: ${_model.isLoaded}, hasError: ${_model.hasError}, isLoading: $_isLoading, Time: ${DateTime.now()}");
+
+    if (!_model.isLoaded) {
+      print("⚠️ [HomePageWidget] build: Page not loaded. Scheduling load...");
+      SchedulerBinding.instance.addPostFrameCallback((_) async {
+        await _safeLoadPageData();
+      });
+    }
 
     return GestureDetector(
       onTap: () {
@@ -359,7 +413,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
             if (_model.isLoaded == true && _model.hasError == true)
               ErrorStateWidget(
                 title: FloridaMessages.errorTitle(context),
-                message: _model.errorMessage ?? FloridaMessages.genericError(context),
+                message: _model.errorMessage ??
+                    FloridaMessages.genericError(context),
                 icon: Icons.cloud_off_rounded,
                 onRetry: () async {
                   _model.isLoaded = false;
@@ -372,9 +427,35 @@ class _HomePageWidgetState extends State<HomePageWidget>
                   GoRouter.of(context).prepareAuthEvent();
                   await authManager.signOut();
                   GoRouter.of(context).clearRedirectLocation();
-                  context.goNamedAuth(LoginSignUpWidget.routeName, context.mounted);
+                  context.goNamedAuth(
+                      LoginSignUpWidget.routeName, context.mounted);
                 },
                 secondaryActionText: 'Sign Out',
+              ),
+            // Loading state - Visual Debugging
+            if (!_model.isLoaded || _isLoading)
+              Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.max,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CircularProgressIndicator(
+                      color: Colors.red, // Making it RED to distinguish
+                      strokeWidth: 5.0,
+                    ),
+                    Padding(
+                      padding: EdgeInsets.only(top: 20),
+                      child: Text(
+                        "LOADING HOMEPAGE (v2)\nisLoaded: ${_model.isLoaded}\nisLoading: $_isLoading",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            color: Colors.red,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold),
+                      ),
+                    )
+                  ],
+                ),
               ),
             // Normal content - only show when loaded without errors
             if (_model.isLoaded == true && _model.hasError == false)
@@ -884,9 +965,9 @@ our care */
                                                 ),
                                                 child: Image.network(
                                                   functions.getkeyfromjsonstring(
-                                                                  sitearrayItem,
-                                                                  'image') !=
-                                                              ''
+                                                              sitearrayItem,
+                                                              'image') !=
+                                                          ''
                                                       ? '${functions.tostr(functions.getkeyfromjsonstring(sitearrayItem, 'image'))}'
                                                       : random_data
                                                           .randomImageUrl(
@@ -1131,33 +1212,6 @@ our care */
                           children: [],
                         ),
                       ],
-                    ),
-                  ],
-                ),
-              ),
-            if (_model.isLoaded == false)
-              Container(
-                height: MediaQuery.sizeOf(context).height * 1.0,
-                decoration: BoxDecoration(
-                  color: FlutterFlowTheme.of(context).primaryBackground,
-                ),
-                alignment: AlignmentDirectional(0.0, 0.0),
-                child: Stack(
-                  children: [
-                    Container(
-                      width: MediaQuery.sizeOf(context).width * 1.0,
-                      height: 123.7,
-                      decoration: BoxDecoration(
-                        color: FlutterFlowTheme.of(context).primaryBackground,
-                      ),
-                      child: Lottie.asset(
-                        'assets/jsons/loading2.json',
-                        width: 100.0,
-                        height: 60.1,
-                        fit: BoxFit.contain,
-                        frameRate: FrameRate(60.0),
-                        animate: true,
-                      ),
                     ),
                   ],
                 ),

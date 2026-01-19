@@ -1,3 +1,5 @@
+import '/backend/api_client/api_client.dart';
+import '/backend/api_client/models/index.dart';
 import '/auth/firebase_auth/auth_util.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -1056,24 +1058,51 @@ class _AddCarsWidgetState extends State<AddCarsWidget> {
                           16.0, 12.0, 16.0, 12.0),
                       child: FFButtonWidget(
                         onPressed: () async {
-                          if (_model.plateTextController.text != '') {
-                            if ((_model.notesList.isNotEmpty) == true) {
-                              if ((_model.textController4.text != '') &&
-                                  (_model.customNotes == true)) {
-                                _model.addToNoteSelected(
-                                    _model.textController4.text);
-                                safeSetState(() {});
-                              }
-                              if (_model.ticketcreated != '400') {
+                          if (_model.plateTextController.text.isNotEmpty &&
+                              _model.modelTextController.text.isNotEmpty &&
+                              _model.colorTextController.text.isNotEmpty) {
+                            try {
+                              final apiClient = ApiClient();
+                              final newVehicle = VehicleCreation(
+                                vehicleMake: _model.modelTextController.text,
+                                vehicleModel: '', // Model is not separate in the form
+                                vehicleYear: '', // Year is not in the form
+                                licensePlate: _model.plateTextController.text,
+                                color: _model.colorTextController.text,
+                              );
+                              final result = await apiClient.createVehicle(newVehicle);
+                              if (result.status.status == 'CREATED') {
                                 context.pushNamed(HomePageWidget.routeName);
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      result.status.message ?? 'Failed to create vehicle',
+                                      style: TextStyle(
+                                        color: FlutterFlowTheme.of(context)
+                                            .primaryText,
+                                      ),
+                                    ),
+                                    duration: Duration(milliseconds: 4000),
+                                    backgroundColor:
+                                        FlutterFlowTheme.of(context).error,
+                                  ),
+                                );
                               }
-                              _model.ticketcreated = await actions.createTicket(
-                                FFAppConstants.createTicketURL,
-                                currentJwtToken,
-                                widget.id!,
-                                '{\"model\": \"${_model.modelTextController.text}\", \"color\": \"${_model.colorTextController.text}\", \"plate\": \"${_model.plateTextController.text}\"}',
-                                currentUserEmail,
-                                _model.noteSelected.toList(),
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'An error occurred: $e',
+                                    style: TextStyle(
+                                      color: FlutterFlowTheme.of(context)
+                                          .primaryText,
+                                    ),
+                                  ),
+                                  duration: Duration(milliseconds: 4000),
+                                  backgroundColor:
+                                      FlutterFlowTheme.of(context).error,
+                                ),
                               );
                             }
                           } else {

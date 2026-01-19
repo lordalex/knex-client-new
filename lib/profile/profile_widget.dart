@@ -1,3 +1,5 @@
+import '/backend/api_client/api_client.dart';
+import '/backend/api_client/models/index.dart';
 import '/auth/firebase_auth/auth_util.dart';
 import '/flutter_flow/flutter_flow_expanded_image_view.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -24,6 +26,7 @@ class ProfileWidget extends StatefulWidget {
 
 class _ProfileWidgetState extends State<ProfileWidget> {
   late ProfileModel _model;
+  late ApiClient apiClient;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -32,31 +35,33 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     super.initState();
     _model = createModel(context, () => ProfileModel());
 
+    apiClient = ApiClient();
+
     // On page load action.
     SchedulerBinding.instance.addPostFrameCallback((_) async {
-      _model.response = await actions.sendjsontourl(
-        '{\"searchCriteria\": {\"email\":  \"${currentUserEmail}\"}}',
-        currentJwtToken,
-        FFAppConstants.searchUserURL,
-      );
-      _model.fullname =
-          '${functions.tostr(functions.getkeyfromjsonstring(_model.response!, 'firstname'))} ${functions.tostr(functions.getkeyfromjsonstring(_model.response!, 'lastname'))}';
-      safeSetState(() {});
-      _model.photoReturned = await actions.base64toBytesAction(
-        functions
-            .tostr(functions.getkeyfromjsonstring(_model.response!, 'photo')),
-        'photo',
-      );
-      _model.photo = _model.photoReturned;
-      safeSetState(() {});
-      if (_model.response == '401') {
-        context.pushNamed(LoginSignUpWidget.routeName);
+      try {
+        final response = await apiClient.searchUserClient({'email': currentUserEmail});
+        if (response.isNotEmpty) {
+          final userProfile = response.first;
+          _model.fullname = '${userProfile.firstName} ${userProfile.lastName}';
+          if (userProfile.photo != null) {
+            _model.photoReturned = await actions.base64toBytesAction(
+              userProfile.photo!,
+              'photo',
+            );
+            _model.photo = _model.photoReturned;
+          }
+        }
+      } catch (e) {
+        if (e.toString().contains('401')) {
+          context.pushNamed(LoginSignUpWidget.routeName);
+        }
+        // Handle other errors if needed
+        print(e);
       }
       _model.isQueryLoaded = true;
       safeSetState(() {});
     });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
   @override
