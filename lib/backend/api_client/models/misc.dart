@@ -1,4 +1,3 @@
-
 import '/backend/schema/util/schema_util.dart';
 import 'index.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -45,17 +44,24 @@ class Location {
     required this.id,
     required this.name,
     this.address,
+    this.rawData = const {},
   });
 
   final String id;
   final String name;
   final String? address;
+  final Map<String, dynamic> rawData;
 
   factory Location.fromMap(Map<String, dynamic> data) {
     return Location(
-      id: data['id'] as String,
-      name: data['name'] as String,
-      address: data['address'] as String?,
+      id: data['id']?.toString() ?? '',
+      name: data['name']?.toString() ?? '',
+      address: data['address']?.toString(),
+      rawData: data,
     );
+  }
+
+  Map<String, dynamic> toMap() {
+    return rawData;
   }
 }

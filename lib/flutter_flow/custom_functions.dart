@@ -61,14 +61,40 @@ String getelementsfromjson(String inpuString) {
 
 List<String> jsontoarray(String jsonString) {
   try {
-    List<Map<String, dynamic>> jsonArray =
-        List<Map<String, dynamic>>.from(jsonDecode(jsonString));
-    List<String> stringRepresentations =
-        jsonArray.map((map) => jsonEncode(map)).toList();
+    dynamic decoded = jsonDecode(jsonString);
+    List<dynamic> jsonList;
+
+    if (decoded is List) {
+      jsonList = decoded;
+    } else if (decoded is Map) {
+      // Handle wrapped lists (common in APIs)
+      if (decoded.containsKey('results') && decoded['results'] is List) {
+        jsonList = decoded['results'];
+      } else if (decoded.containsKey('data') && decoded['data'] is List) {
+        jsonList = decoded['data'];
+      } else {
+        // Not a list, and no known list wrapper
+        print(
+            "jsontoarray: Input is a Map but no list found in 'results' or 'data'");
+        return [];
+      }
+    } else {
+      print("jsontoarray: Input is neither List nor Map");
+      return [];
+    }
+
+    if (jsonList.isEmpty) return [];
+
+    List<String> stringRepresentations = jsonList.map((item) {
+      // Ensure we encode only valid items (Maps usually)
+      return jsonEncode(item);
+    }).toList();
+
     return stringRepresentations;
   } catch (e) {
-    // Return a list with the error message if something goes wrong
-    return ['Error: $e'];
+    print("jsontoarray error: $e");
+    // Return empty list on error instead of error string to prevent UI parsing crashes
+    return [];
   }
 }
 
@@ -85,6 +111,9 @@ String asthecrowflies(
 
   double lat1, lat2, lon1, lon2;
   try {
+    if (lat1s.isEmpty || lat2s.isEmpty || lon1s.isEmpty || lon2s.isEmpty) {
+      return "";
+    }
     lat1 = double.parse(lat1s);
     lat2 = double.parse(lat2s);
     lon1 = double.parse(lon1s);

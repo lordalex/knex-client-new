@@ -14,8 +14,7 @@ class SiteDetailsModel extends FlutterFlowModel<SiteDetailsWidget> {
 
   String address = ' ';
 
-  String businessImage =
-      'https://en.wikipedia.org/wiki/Restaurant#/media/File:Interior_of_Le_Bernardin.jpg';
+  String businessImage = 'https://placehold.co/600x400';
 
   ///  State fields for stateful widgets in this page.
 

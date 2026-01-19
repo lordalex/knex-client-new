@@ -251,11 +251,21 @@ class ApiClient {
   }
 
   Future<List<Location>> getLocations() async {
-    final response = await _callApi(
-      '/getLocations',
-      body: {},
-    );
-    return (response as List).map((data) => Location.fromMap(data)).toList();
+    try {
+      final response = await _callApi(
+        '/getLocations',
+        body: {},
+      );
+      if (response is List) {
+        return response.map((data) => Location.fromMap(data)).toList();
+      }
+      print(
+          "⚠️ [ApiClient] getLocations: Expected List but got ${response.runtimeType}");
+      return [];
+    } catch (e) {
+      print("⚠️ [ApiClient] getLocations error: $e");
+      return [];
+    }
   }
 
   Future<CrudResult> createTicket(Ticket data) async {

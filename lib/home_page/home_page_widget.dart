@@ -20,6 +20,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'home_page_model.dart';
 export 'home_page_model.dart';
+import '/backend/api_client/api_client.dart';
 
 class HomePageWidget extends StatefulWidget {
   const HomePageWidget({super.key});
@@ -34,6 +35,7 @@ class HomePageWidget extends StatefulWidget {
 class _HomePageWidgetState extends State<HomePageWidget>
     with TickerProviderStateMixin {
   late HomePageModel _model;
+  final apiClient = ApiClient();
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
@@ -254,25 +256,18 @@ class _HomePageWidgetState extends State<HomePageWidget>
       _model.pint = functions.getkeyfromjsonstring(_model.pin, 'PIN');
       safeSetState(() {});
 
-      // 4. Search Sites
-      print("🔍 [HomePage] Step 4/5: Fetching Sites...");
-      _model.responseQ = await actions.sendjsontourl(
-        '{    \"modelName\": \"Site\",    \"searchCriteria\": {}  }',
-        currentJwtToken,
-        FFAppConstants.searchModelURL,
-      );
-      print("✅ [HomePage] Step 4/5: Sites response received");
+      // 4. Search Sites (Using ApiClient)
+      print("🔍 [HomePage] Step 4/5: Fetching Sites via ApiClient...");
+      try {
+        final locations = await apiClient.getLocations();
+        print("✅ [HomePage] Step 4/5: Received ${locations.length} locations");
 
-      if (_model.responseQ == '401') {
-        context.pushNamedAuth(LoginSignUpWidget.routeName, context.mounted);
-        GoRouter.of(context).prepareAuthEvent();
-        await authManager.signOut();
-        GoRouter.of(context).clearRedirectLocation();
-        return;
+        // Convert Location objects to JSON strings for compatibility with existing model/UI
+        _model.sites = locations.map((loc) => jsonEncode(loc.toMap())).toList();
+      } catch (e) {
+        print("⚠️ [HomePage] Error fetching locations: $e");
+        _model.sites = [];
       }
-
-      _model.sites =
-          functions.jsontoarray(_model.responseQ!).toList().cast<String>();
       safeSetState(() {});
 
       try {
