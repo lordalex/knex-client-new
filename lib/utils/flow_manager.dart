@@ -6,6 +6,7 @@ import '/flutter_flow/custom_functions.dart' as functions;
 import '/app_constants.dart';
 import '/index.dart'; // For Widget imports like ProfileCreateWidget, TicketWidget
 import 'package:http/http.dart' as http; // Basic http for schema fetching
+import '/backend/api_client/api_client.dart';
 
 class FlowManager {
   // Singleton pattern for easy access if needed, though static methods might suffice.
@@ -230,67 +231,22 @@ class FlowManager {
       String jwtToken, String email) async {
     print("🔍 [FlowManager] Fetching profile data for $email");
 
-    final response = await actions.sendjsontourl(
-      '{\"searchCriteria\": {\"email\":  \"$email\"}}',
-      jwtToken,
-      FFAppConstants.searchUserURL,
-    );
-
-    // Error handling matching legacy logic
-    if (response == '401') {
-      throw Exception('401 Unauthorized');
-    }
-    if (response == '404' || response == '[]' || response.isEmpty) {
-      // Return empty map to signify no profile found (incomplete)
-      print("⚠️ [FlowManager] Profile not found or empty response.");
-      return {};
-    }
-
     try {
-      String rawProfile = functions.getelementsfromjson(response);
-      String insDataEncoded =
-          functions.getkeyfromjsonstring(rawProfile, 'insData');
+      final apiClient = ApiClient();
+      final profiles = await apiClient.searchUserClient({'email': email});
 
-      Map<String, dynamic> finalProfile = {};
-
-      // Parse outer layer first
-      try {
-        final outer = jsonDecode(rawProfile);
-        if (outer is Map<String, dynamic>) {
-          finalProfile.addAll(outer);
-        }
-      } catch (e) {
-        print("⚠️ [FlowManager] Could not decode rawProfile as map: $e");
+      if (profiles.isEmpty) {
+        print("⚠️ [FlowManager] Profile not found or empty response.");
+        return {};
       }
 
-      // Merge insData if valid
-      if (insDataEncoded.isNotEmpty &&
-          insDataEncoded != 'null' &&
-          insDataEncoded != '""') {
-        try {
-          var decoded = jsonDecode(insDataEncoded);
-
-          if (decoded is Map<String, dynamic>) {
-            finalProfile.addAll(decoded);
-          } else if (decoded is String) {
-            // If decoded is a String, it means insData was a JSON string inside the JSON.
-            // We need to decode THIS string to get the map.
-            try {
-              var deepDecoded = jsonDecode(decoded);
-              if (deepDecoded is Map<String, dynamic>) {
-                finalProfile.addAll(deepDecoded);
-              }
-            } catch (e) {
-              print("⚠️ [FlowManager] Deep decode of insData failed: $e");
-            }
-          }
-        } catch (e) {
-          print("❌ [FlowManager] Parsing insData error: $e");
-        }
-      }
-
-      return finalProfile;
+      // Return the first profile as a Map
+      // We explicitly trust ApiClient parsing
+      return profiles.first.toMap();
     } catch (e) {
+      if (e.toString().contains('401')) {
+        throw Exception('401 Unauthorized');
+      }
       print("❌ [FlowManager] Fetch/Parse Error: $e");
       // Return bare minimum to avoid crashes, but likely incomplete
       return {};
@@ -302,125 +258,29 @@ class FlowManager {
   static Future<String?> checkActiveTicket(
       String jwtToken, String email) async {
     print("🔍 [FlowManager] Checking active tickets...");
-    print("📤 [FlowManager] Request: URL=${FFAppConstants.latesticketURL}");
-    print("📤 [FlowManager] Request Body: {\"userclient\": \"$email\"}");
 
-    String response;
     try {
-      response = await actions.sendjsontourl(
-        '{"userclient": "$email"}',
-        jwtToken,
-        FFAppConstants.latesticketURL,
-      );
-      print("📥 [FlowManager] Response received (length=${response.length})");
-      print(
-          "📥 [FlowManager] Response: ${response.length > 500 ? response.substring(0, 500) + '...' : response}");
-    } catch (e) {
-      print("⚠️ [FlowManager] Network error checking tickets: $e");
-      return null;
-    }
+      final apiClient = ApiClient();
+      final ticket = await apiClient.getLatestTicket();
 
-    // Handle error codes and empty responses
-    if (response.isEmpty ||
-        response == '400' ||
-        response == '404' ||
-        response == '[]' ||
-        response == '{}' ||
-        response.contains('Request failed') ||
-        response.contains('error')) {
-      print(
-          "ℹ️ [FlowManager] No active ticket found (empty/error response: '$response')");
-      return null;
-    }
-
-    // Try to parse the response as JSON
-    try {
-      final decoded = jsonDecode(response);
-      print("🔍 [FlowManager] Parsed response type: ${decoded.runtimeType}");
-
-      // Handle the API response format: {"status": 200, "data": [...]}
-      if (decoded is Map<String, dynamic>) {
-        // Check if this is a wrapper response with status and data
-        if (decoded.containsKey('data')) {
-          final data = decoded['data'];
-          print(
-              "🔍 [FlowManager] Found 'data' field, type: ${data.runtimeType}");
-
-          if (data is List) {
-            if (data.isEmpty) {
-              print("ℹ️ [FlowManager] data array is empty, no active ticket");
-              return null;
-            }
-            // Get the last ticket from the list
-            final ticketData = data.last as Map<String, dynamic>;
-            final ticketStatus = ticketData['status']?.toString() ?? '';
-            print("🔍 [FlowManager] Ticket status from data: '$ticketStatus'");
-
-            if (ticketStatus.isNotEmpty &&
-                ticketStatus != 'Cancelled' &&
-                ticketStatus != 'Completed') {
-              print(
-                  "⚠️ [FlowManager] Active ticket found (status: $ticketStatus). Redirecting to TicketWidget.");
-              return TicketWidget.routeName;
-            }
-            print(
-                "ℹ️ [FlowManager] Ticket status is '$ticketStatus', not blocking");
-            return null;
-          } else if (data is Map<String, dynamic>) {
-            // Single ticket object
-            final ticketStatus = data['status']?.toString() ?? '';
-            print("🔍 [FlowManager] Single ticket status: '$ticketStatus'");
-
-            if (ticketStatus.isNotEmpty &&
-                ticketStatus != 'Cancelled' &&
-                ticketStatus != 'Completed') {
-              print(
-                  "⚠️ [FlowManager] Active ticket found (status: $ticketStatus). Redirecting to TicketWidget.");
-              return TicketWidget.routeName;
-            }
-            return null;
-          }
-        }
-
-        // Direct ticket object (no wrapper)
-        final directStatus = decoded['status']?.toString() ?? '';
-        // Check if this looks like an HTTP status code (numeric)
-        if (int.tryParse(directStatus) != null) {
-          print(
-              "ℹ️ [FlowManager] Status '$directStatus' appears to be HTTP code, not ticket status. No active ticket.");
-          return null;
-        }
-
-        if (directStatus.isNotEmpty &&
-            directStatus != 'Cancelled' &&
-            directStatus != 'Completed') {
-          print(
-              "⚠️ [FlowManager] Active ticket found (status: $directStatus). Redirecting to TicketWidget.");
-          return TicketWidget.routeName;
-        }
-        return null;
-      } else if (decoded is List) {
-        if (decoded.isEmpty) {
-          print("ℹ️ [FlowManager] Empty ticket list, no active ticket");
-          return null;
-        }
-        final ticketData = decoded.last as Map<String, dynamic>;
-        final ticketStatus = ticketData['status']?.toString() ?? '';
-
-        if (ticketStatus.isNotEmpty &&
-            ticketStatus != 'Cancelled' &&
-            ticketStatus != 'Completed') {
-          print(
-              "⚠️ [FlowManager] Active ticket found (status: $ticketStatus). Redirecting to TicketWidget.");
-          return TicketWidget.routeName;
-        }
+      if (ticket == null) {
+        print("ℹ️ [FlowManager] No active ticket found (null response)");
         return null;
       }
 
-      print("⚠️ [FlowManager] Unexpected ticket response format");
+      print("🔍 [FlowManager] Ticket status: '${ticket.status}'");
+
+      if (ticket.status.isNotEmpty &&
+          ticket.status != 'Cancelled' &&
+          ticket.status != 'Completed') {
+        print(
+            "⚠️ [FlowManager] Active ticket found (status: ${ticket.status}). Redirecting to TicketWidget.");
+        return TicketWidget.routeName;
+      }
+
       return null;
     } catch (e) {
-      print("⚠️ [FlowManager] Error parsing ticket response: $e");
+      print("⚠️ [FlowManager] Network error checking tickets: $e");
       return null;
     }
   }

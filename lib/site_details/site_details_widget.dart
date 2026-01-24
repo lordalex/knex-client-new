@@ -55,10 +55,17 @@ class _SiteDetailsWidgetState extends State<SiteDetailsWidget> {
         if (location != null) {
           _model.name = location.name;
           _model.address = location.address ?? '';
+          
+          // Populate the sitedetails string which is required by the UI
+          _model.sitedetails = jsonEncode(location.toMap());
+          
           // Bio, company and businessImage are not in the new model
           _model.bio = '';
           _model.company = '';
-          _model.businessImage = '';
+          
+          // Use a placeholder if image is missing to prevent NetworkImage crash
+          _model.businessImage = 'https://placehold.co/600x400';
+          
           safeSetState(() {});
         }
       } catch (e) {

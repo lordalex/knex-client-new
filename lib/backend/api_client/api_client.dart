@@ -86,12 +86,30 @@ class ApiClient {
       Map<String, dynamic> searchCriteria) async {
     final response = await _callApi(
       '/searchUserClient',
-      body: {'searchCriteria': searchCriteria},
+      body: searchCriteria,
     );
-    return (response as List).map((data) {
-      final insData = json.decode(data['insData']);
-      insData['id'] = data['id'];
-      return UserClientProfile.fromMap(insData);
+
+    final List<dynamic> dataList;
+    if (response is List) {
+      dataList = response;
+    } else if (response is Map && response.containsKey('data')) {
+      dataList = response['data'] as List;
+    } else {
+      print("⚠️ [ApiClient] searchUserClient: Unexpected response format");
+      return [];
+    }
+
+    return dataList.map((data) {
+      // Some versions return raw doc, some return wrapped with id/insData
+      if (data is Map<String, dynamic> && data.containsKey('insData')) {
+        final insData = data['insData'] is String
+            ? json.decode(data['insData'])
+            : data['insData'];
+        insData['id'] = data['id'];
+        return UserClientProfile.fromMap(insData);
+      } else {
+        return UserClientProfile.fromMap(data);
+      }
     }).toList();
   }
 
@@ -228,10 +246,23 @@ class ApiClient {
         body: {},
       );
       print("✅ [ApiClient] getLatestTicket response received");
-      final ticket = Ticket.fromMap(response);
-      print(
-          "✅ [ApiClient] Ticket parsed: status=${ticket.status}, id=${ticket.id}");
-      return ticket;
+
+      if (response is Map<String, dynamic>) {
+        if (response.containsKey('data')) {
+          final data = response['data'];
+          if (data is List && data.isNotEmpty) {
+            return Ticket.fromMap(data.last);
+          } else if (data is Map<String, dynamic>) {
+            return Ticket.fromMap(data);
+          }
+        }
+        // Fallback for direct ticket object
+        return Ticket.fromMap(response);
+      } else if (response is List && response.isNotEmpty) {
+        return Ticket.fromMap(response.last);
+      }
+
+      return null;
     } catch (e) {
       print("⚠️ [ApiClient] getLatestTicket error: $e");
       if (e.toString().contains('404')) {
