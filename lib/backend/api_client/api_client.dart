@@ -250,14 +250,24 @@ class ApiClient {
       if (response is Map<String, dynamic>) {
         if (response.containsKey('data')) {
           final data = response['data'];
-          if (data is List && data.isNotEmpty) {
-            return Ticket.fromMap(data.last);
+          if (data is List) {
+            if (data.isNotEmpty) {
+              return Ticket.fromMap(data.last);
+            } else {
+              return null; // Empty list means no ticket
+            }
           } else if (data is Map<String, dynamic>) {
-            return Ticket.fromMap(data);
+            if (data.containsKey('user_client_id') || data.containsKey('id')) {
+              return Ticket.fromMap(data);
+            } else {
+              return null;
+            }
           }
         }
-        // Fallback for direct ticket object
-        return Ticket.fromMap(response);
+        // Fallback for direct ticket object if it looks like one
+        if (response.containsKey('user_client_id')) {
+          return Ticket.fromMap(response);
+        }
       } else if (response is List && response.isNotEmpty) {
         return Ticket.fromMap(response.last);
       }

@@ -898,8 +898,9 @@ our care */
                                           SiteDetailsWidget.routeName,
                                           queryParameters: {
                                             'id': serializeParam(
-                                              functions.getkeyfromjsonstring(
-                                                  sitearrayItem, 'id'),
+                                              functions.tostr(functions
+                                                  .getkeyfromjsonstring(
+                                                      sitearrayItem, 'id')),
                                               ParamType.String,
                                             ),
                                           }.withoutNulls,

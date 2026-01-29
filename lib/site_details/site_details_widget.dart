@@ -50,8 +50,12 @@ class _SiteDetailsWidgetState extends State<SiteDetailsWidget> {
       try {
         final apiClient = ApiClient();
         final locations = await apiClient.getLocations();
+        
+        // Ensure ID is clean of quotes for robust matching
+        final targetId = functions.tostr(widget.id ?? '');
         final location =
-            locations.firstWhereOrNull((loc) => loc.id == widget.id);
+            locations.firstWhereOrNull((loc) => loc.id == targetId);
+        
         if (location != null) {
           _model.name = location.name;
           _model.address = location.address ?? '';
@@ -59,12 +63,20 @@ class _SiteDetailsWidgetState extends State<SiteDetailsWidget> {
           // Populate the sitedetails string which is required by the UI
           _model.sitedetails = jsonEncode(location.toMap());
           
-          // Bio, company and businessImage are not in the new model
-          _model.bio = '';
-          _model.company = '';
+          // Populate bio and company if available in rawData
+          _model.bio = location.rawData['bio']?.toString() ?? '';
+          _model.company = (location.rawData['company'] is Map) 
+              ? (location.rawData['company']['name']?.toString() ?? '')
+              : '';
           
-          // Use a placeholder if image is missing to prevent NetworkImage crash
-          _model.businessImage = 'https://placehold.co/600x400';
+          // Use the first photo from rawData if available, otherwise use a placeholder
+          if (location.rawData.containsKey('photos') &&
+              location.rawData['photos'] is List &&
+              (location.rawData['photos'] as List).isNotEmpty) {
+            _model.businessImage = location.rawData['photos'][0].toString();
+          } else {
+            _model.businessImage = 'https://picsum.photos/seed/valet/600/400';
+          }
           
           safeSetState(() {});
         }
@@ -264,6 +276,14 @@ class _SiteDetailsWidgetState extends State<SiteDetailsWidget> {
                             hoverColor: Colors.transparent,
                             highlightColor: Colors.transparent,
                             onTap: () async {
+                              if (_model.sitedetails == null) {
+                                showSnackbar(
+                                  context,
+                                  'Location details not loaded yet. Please wait or try again.',
+                                );
+                                return;
+                              }
+
                               await showDialog(
                                 context: context,
                                 builder: (alertDialogContext) {
@@ -286,7 +306,7 @@ class _SiteDetailsWidgetState extends State<SiteDetailsWidget> {
                                 AddCarsWidget.routeName,
                                 queryParameters: {
                                   'id': serializeParam(
-                                    widget.id,
+                                    functions.tostr(widget.id ?? ''),
                                     ParamType.String,
                                   ),
                                   'notesJson': serializeParam(
@@ -458,28 +478,29 @@ class _SiteDetailsWidgetState extends State<SiteDetailsWidget> {
                       child: Column(
                         mainAxisSize: MainAxisSize.max,
                         children: [
-                          if (FFAppState().myFavs.contains(widget.id) == false)
-                            Align(
+                                                      if (FFAppState().myFavs.contains(functions.tostr(widget.id ?? '')) == false)                            Align(
                               alignment: AlignmentDirectional(0.0, 1.0),
                               child: Padding(
                                 padding: EdgeInsetsDirectional.fromSTEB(
                                     0.0, 0.0, 0.0, 12.0),
-                                child: FFButtonWidget(
-                                  onPressed: () async {
-                                    if (FFAppState()
-                                            .myFavs
-                                            .contains(_model.sitedetails) ==
-                                        true) {
-                                      FFAppState().removeFromMyFavs(
-                                          _model.sitedetails!);
-                                      safeSetState(() {});
-                                    } else {
-                                      FFAppState()
-                                          .addToMyFavs(_model.sitedetails!);
-                                      safeSetState(() {});
-                                    }
-                                  },
-                                  text: FFLocalizations.of(context).getText(
+                                                                  child: FFButtonWidget(
+                                                                    onPressed: () async {
+                                                                      if (_model.sitedetails == null) {
+                                                                        return;
+                                                                      }
+                                                                      if (FFAppState()
+                                                                              .myFavs
+                                                                              .contains(_model.sitedetails) ==
+                                                                          true) {
+                                                                        FFAppState().removeFromMyFavs(
+                                                                            _model.sitedetails!);
+                                                                        safeSetState(() {});
+                                                                      } else {
+                                                                        FFAppState()
+                                                                            .addToMyFavs(_model.sitedetails!);
+                                                                        safeSetState(() {});
+                                                                      }
+                                                                    },                                  text: FFLocalizations.of(context).getText(
                                     'o6ipanl1' /* Favorite Site */,
                                   ),
                                   icon: Icon(
@@ -518,28 +539,30 @@ class _SiteDetailsWidgetState extends State<SiteDetailsWidget> {
                                 ),
                               ),
                             ),
-                          if (FFAppState().myFavs.contains(widget.id) == true)
+                          if (FFAppState().myFavs.contains(functions.tostr(widget.id ?? '')) == true)
                             Align(
                               alignment: AlignmentDirectional(0.0, 1.0),
                               child: Padding(
                                 padding: EdgeInsetsDirectional.fromSTEB(
                                     0.0, 0.0, 0.0, 12.0),
-                                child: FFButtonWidget(
-                                  onPressed: () async {
-                                    if (FFAppState()
-                                            .myFavs
-                                            .contains(_model.sitedetails) ==
-                                        true) {
-                                      FFAppState().removeFromMyFavs(
-                                          _model.sitedetails!);
-                                      safeSetState(() {});
-                                    } else {
-                                      FFAppState()
-                                          .addToMyFavs(_model.sitedetails!);
-                                      safeSetState(() {});
-                                    }
-                                  },
-                                  text: FFLocalizations.of(context).getText(
+                                                                  child: FFButtonWidget(
+                                                                    onPressed: () async {
+                                                                      if (_model.sitedetails == null) {
+                                                                        return;
+                                                                      }
+                                                                      if (FFAppState()
+                                                                              .myFavs
+                                                                              .contains(_model.sitedetails) ==
+                                                                          true) {
+                                                                        FFAppState().removeFromMyFavs(
+                                                                            _model.sitedetails!);
+                                                                        safeSetState(() {});
+                                                                      } else {
+                                                                        FFAppState()
+                                                                            .addToMyFavs(_model.sitedetails!);
+                                                                        safeSetState(() {});
+                                                                      }
+                                                                    },                                  text: FFLocalizations.of(context).getText(
                                     'rezxzsxc' /* Remove site from favorites */,
                                   ),
                                   icon: Icon(
