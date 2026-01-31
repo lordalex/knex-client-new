@@ -229,7 +229,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
       if (profileRedirect != null) {
         print(
             "⚠️ [HomePage] Profile incomplete. Redirecting to $profileRedirect");
-        context.pushNamedAuth(profileRedirect, context.mounted);
+        // Use goNamedAuth to REPLACE the current route, preventing back-navigation loops
+        context.goNamedAuth(profileRedirect, context.mounted);
         return;
       }
       print("✅ [HomePage] Profile is complete. Proceeding...");
@@ -301,7 +302,8 @@ class _HomePageWidgetState extends State<HomePageWidget>
       if (ticketRedirect != null) {
         print(
             "⚠️ [HomePage] Active ticket found. Redirecting to $ticketRedirect");
-        context.pushNamedAuth(ticketRedirect, context.mounted);
+        // Use goNamedAuth to REPLACE the current route, preventing back-navigation loops
+        context.goNamedAuth(ticketRedirect, context.mounted);
         return;
       }
 

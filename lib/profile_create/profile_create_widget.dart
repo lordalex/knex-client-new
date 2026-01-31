@@ -1578,14 +1578,12 @@ class _ProfileCreateWidgetState extends State<ProfileCreateWidget> {
                                         true) {
                                       FFAppState().UserProfileCreated = true;
                                       safeSetState(() {});
-                                      if (Navigator.of(context).canPop()) {
-                                        context.pop();
-                                      }
-                                      context
-                                          .pushNamed(HomePageWidget.routeName);
+                                      // Use goNamed to replace route stack cleanly
+                                      context.goNamed(HomePageWidget.routeName);
                                     }
                                   } else {
-                                    context.pushNamed(HomePageWidget.routeName);
+                                    // Use goNamed to replace route stack cleanly
+                                    context.goNamed(HomePageWidget.routeName);
                                   }
 
                                   safeSetState(() {});
