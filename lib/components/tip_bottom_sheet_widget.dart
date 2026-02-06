@@ -2,7 +2,7 @@ import '/auth/firebase_auth/auth_util.dart';
 import '/backend/stripe/payment_manager.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
-import '/custom_code/actions/index.dart' as actions;
+
 import '/flutter_flow/custom_functions.dart' as functions;
 import '/utils/florida_messages.dart';
 import 'package:easy_debounce/easy_debounce.dart';
@@ -638,18 +638,20 @@ class _TipBottomSheetWidgetState extends State<TipBottomSheetWidget> {
                               context: context,
                               builder: (alertDialogContext) {
                                 return AlertDialog(
-                                  content: Text(FloridaMessages.tipEmpty(context)),
+                                  content:
+                                      Text(FloridaMessages.tipEmpty(context)),
                                   actions: [
                                     TextButton(
                                       onPressed: () =>
                                           Navigator.pop(alertDialogContext),
-                                      child: Text(FloridaMessages.okButton(context)),
+                                      child: Text(
+                                          FloridaMessages.okButton(context)),
                                     ),
                                   ],
                                 );
                               },
                             );
-                            if (_shouldSetState) safeSetState(() {});
+
                             return;
                           }
                         }
@@ -687,7 +689,8 @@ class _TipBottomSheetWidgetState extends State<TipBottomSheetWidget> {
                           paymentResponse.errorMessage != null) {
                         showSnackbar(
                           context,
-                          FloridaMessages.paymentError(context, paymentResponse.errorMessage),
+                          FloridaMessages.paymentError(
+                              context, paymentResponse.errorMessage),
                         );
                       }
                       _model.paymentId = paymentResponse.paymentId ?? '';

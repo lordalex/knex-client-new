@@ -1,11 +1,10 @@
 import '/backend/api_client/api_client.dart';
-import '/backend/api_client/models/index.dart' as models;
-import '/auth/firebase_auth/auth_util.dart';
+
 import '/flutter_flow/flutter_flow_expanded_image_view.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
-import '/custom_code/actions/index.dart' as actions;
+
 import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
 import 'package:ff_theme/flutter_flow/flutter_flow_theme.dart';
@@ -50,25 +49,25 @@ class _SiteDetailsWidgetState extends State<SiteDetailsWidget> {
       try {
         final apiClient = ApiClient();
         final locations = await apiClient.getLocations();
-        
+
         // Ensure ID is clean of quotes for robust matching
         final targetId = functions.tostr(widget.id ?? '');
         final location =
             locations.firstWhereOrNull((loc) => loc.id == targetId);
-        
+
         if (location != null) {
           _model.name = location.name;
           _model.address = location.address ?? '';
-          
+
           // Populate the sitedetails string which is required by the UI
           _model.sitedetails = jsonEncode(location.toMap());
-          
+
           // Populate bio and company if available in rawData
           _model.bio = location.rawData['bio']?.toString() ?? '';
-          _model.company = (location.rawData['company'] is Map) 
+          _model.company = (location.rawData['company'] is Map)
               ? (location.rawData['company']['name']?.toString() ?? '')
               : '';
-          
+
           // Use the first photo from rawData if available, otherwise use a placeholder
           if (location.rawData.containsKey('photos') &&
               location.rawData['photos'] is List &&
@@ -77,7 +76,7 @@ class _SiteDetailsWidgetState extends State<SiteDetailsWidget> {
           } else {
             _model.businessImage = 'https://picsum.photos/seed/valet/600/400';
           }
-          
+
           safeSetState(() {});
         }
       } catch (e) {
@@ -478,29 +477,34 @@ class _SiteDetailsWidgetState extends State<SiteDetailsWidget> {
                       child: Column(
                         mainAxisSize: MainAxisSize.max,
                         children: [
-                                                      if (FFAppState().myFavs.contains(functions.tostr(widget.id ?? '')) == false)                            Align(
+                          if (FFAppState()
+                                  .myFavs
+                                  .contains(functions.tostr(widget.id ?? '')) ==
+                              false)
+                            Align(
                               alignment: AlignmentDirectional(0.0, 1.0),
                               child: Padding(
                                 padding: EdgeInsetsDirectional.fromSTEB(
                                     0.0, 0.0, 0.0, 12.0),
-                                                                  child: FFButtonWidget(
-                                                                    onPressed: () async {
-                                                                      if (_model.sitedetails == null) {
-                                                                        return;
-                                                                      }
-                                                                      if (FFAppState()
-                                                                              .myFavs
-                                                                              .contains(_model.sitedetails) ==
-                                                                          true) {
-                                                                        FFAppState().removeFromMyFavs(
-                                                                            _model.sitedetails!);
-                                                                        safeSetState(() {});
-                                                                      } else {
-                                                                        FFAppState()
-                                                                            .addToMyFavs(_model.sitedetails!);
-                                                                        safeSetState(() {});
-                                                                      }
-                                                                    },                                  text: FFLocalizations.of(context).getText(
+                                child: FFButtonWidget(
+                                  onPressed: () async {
+                                    if (_model.sitedetails == null) {
+                                      return;
+                                    }
+                                    if (FFAppState()
+                                            .myFavs
+                                            .contains(_model.sitedetails) ==
+                                        true) {
+                                      FFAppState().removeFromMyFavs(
+                                          _model.sitedetails!);
+                                      safeSetState(() {});
+                                    } else {
+                                      FFAppState()
+                                          .addToMyFavs(_model.sitedetails!);
+                                      safeSetState(() {});
+                                    }
+                                  },
+                                  text: FFLocalizations.of(context).getText(
                                     'o6ipanl1' /* Favorite Site */,
                                   ),
                                   icon: Icon(
@@ -539,30 +543,34 @@ class _SiteDetailsWidgetState extends State<SiteDetailsWidget> {
                                 ),
                               ),
                             ),
-                          if (FFAppState().myFavs.contains(functions.tostr(widget.id ?? '')) == true)
+                          if (FFAppState()
+                                  .myFavs
+                                  .contains(functions.tostr(widget.id ?? '')) ==
+                              true)
                             Align(
                               alignment: AlignmentDirectional(0.0, 1.0),
                               child: Padding(
                                 padding: EdgeInsetsDirectional.fromSTEB(
                                     0.0, 0.0, 0.0, 12.0),
-                                                                  child: FFButtonWidget(
-                                                                    onPressed: () async {
-                                                                      if (_model.sitedetails == null) {
-                                                                        return;
-                                                                      }
-                                                                      if (FFAppState()
-                                                                              .myFavs
-                                                                              .contains(_model.sitedetails) ==
-                                                                          true) {
-                                                                        FFAppState().removeFromMyFavs(
-                                                                            _model.sitedetails!);
-                                                                        safeSetState(() {});
-                                                                      } else {
-                                                                        FFAppState()
-                                                                            .addToMyFavs(_model.sitedetails!);
-                                                                        safeSetState(() {});
-                                                                      }
-                                                                    },                                  text: FFLocalizations.of(context).getText(
+                                child: FFButtonWidget(
+                                  onPressed: () async {
+                                    if (_model.sitedetails == null) {
+                                      return;
+                                    }
+                                    if (FFAppState()
+                                            .myFavs
+                                            .contains(_model.sitedetails) ==
+                                        true) {
+                                      FFAppState().removeFromMyFavs(
+                                          _model.sitedetails!);
+                                      safeSetState(() {});
+                                    } else {
+                                      FFAppState()
+                                          .addToMyFavs(_model.sitedetails!);
+                                      safeSetState(() {});
+                                    }
+                                  },
+                                  text: FFLocalizations.of(context).getText(
                                     'rezxzsxc' /* Remove site from favorites */,
                                   ),
                                   icon: Icon(

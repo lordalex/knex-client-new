@@ -1572,6 +1572,9 @@ class _ProfileCreateWidgetState extends State<ProfileCreateWidget> {
                                       );
                                       return;
                                     }
+                                    // DEBUG: See what server returns
+                                    print('🔍 [ProfileCreate] Server response: ${_model.profileoutput}');
+                                    print('🔍 [ProfileCreate] validateResponseProfile result: ${functions.validateResponseProfile(_model.profileoutput, 'Profile sent')}');
                                     if (functions.validateResponseProfile(
                                             _model.profileoutput,
                                             'Profile sent') ==

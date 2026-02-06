@@ -8,6 +8,7 @@ import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/instant_timer.dart';
 import 'dart:async';
 import '/custom_code/actions/index.dart' as actions;
+import '/demo/demo_config.dart';
 import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
 import 'package:stop_watch_timer/stop_watch_timer.dart';
@@ -62,8 +63,12 @@ class _TicketTimerWidgetState extends State<TicketTimerWidget>
               _model.laestTicketData = jsonEncode(latestTicket.toMap());
               safeSetState(() {});
               if (latestTicket.status != 'Processing-Departure') {
-                context.pushNamed(TicketWidget.routeName);
                 _model.instantTimerTicket?.cancel();
+                if (DemoConfig.isDemo && latestTicket.status == 'Completed') {
+                  context.pushNamed(TicketCompletedPageWidget.routeName);
+                } else {
+                  context.pushNamed(TicketWidget.routeName);
+                }
                 return;
               }
             }

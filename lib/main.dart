@@ -19,12 +19,18 @@ import 'backend/stripe/payment_manager.dart';
 import 'backend/notification_service.dart';
 import 'package:ff_commons/api_requests/api_manager.dart';
 
+import 'package:google_fonts/google_fonts.dart';
+import 'demo/demo_config.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  GoogleFonts.config.allowRuntimeFetching = false;
   GoRouter.optionURLReflectsImperativeAPIs = true;
   usePathUrlStrategy();
 
-  await initFirebase();
+  if (!DemoConfig.isDemo) {
+    await initFirebase();
+  }
 
   await FlutterFlowTheme.initialize();
 
@@ -33,14 +39,21 @@ void main() async {
   final appState = FFAppState(); // Initialize FFAppState
   await appState.initializePersistedState();
 
-  await initializeStripe();
+  if (!DemoConfig.isDemo) {
+    await initializeStripe();
 
-  // Initialize Notification Service
-  await NotificationService.initialize();
-  ApiManager.addInterceptor(NotificationService.onApiResponse);
+    // Initialize Notification Service
+    await NotificationService.initialize();
+    ApiManager.addInterceptor(NotificationService.onApiResponse);
 
-  if (!kIsWeb) {
-    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    if (!kIsWeb) {
+      FlutterError.onError =
+          FirebaseCrashlytics.instance.recordFlutterFatalError;
+    }
+  }
+
+  if (DemoConfig.isDemo) {
+    print('[DEMO MODE] Running in demo mode - Firebase/Stripe disabled');
   }
 
   runApp(MultiProvider(

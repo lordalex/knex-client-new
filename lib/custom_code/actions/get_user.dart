@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '/demo/demo_config.dart';
 
 // Logging levels with color coding
 enum LogLevel {
@@ -39,6 +40,25 @@ void log(LogLevel level, String message) {
 }
 
 Future<String> getUser(String token, String baseUrl) async {
+  if (DemoConfig.isDemo) {
+    log(LogLevel.INFO, '[DEMO] getUser intercepted');
+    await Future.delayed(const Duration(milliseconds: 150));
+    return jsonEncode({
+      'data': [{
+        'id': 'demo_profile_001',
+        'uid': 'demo_uid_001',
+        'email': 'demo@knex-app.xyz',
+        'firstName': 'Alex',
+        'lastName': 'Sunshine',
+        'phoneNumber': '(305) 555-0123',
+        'photo': null,
+        'address': '100 S Biscayne Blvd',
+        'city': 'Fort Lauderdale',
+        'state': 'FL',
+        'zipCode': '33301',
+      }]
+    });
+  }
   log(LogLevel.INFO, 'Starting getUser function...');
 
   // 1. Pre-computation and Validation

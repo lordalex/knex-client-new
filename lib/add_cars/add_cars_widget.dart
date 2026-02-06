@@ -1,13 +1,14 @@
 import '/backend/api_client/api_client.dart';
 import '/backend/api_client/models/index.dart';
-import '/auth/firebase_auth/auth_util.dart';
+
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
-import '/custom_code/actions/index.dart' as actions;
+
 import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
 import '/utils/florida_messages.dart';
+import '/demo/demo_config.dart';
 import 'package:ff_theme/flutter_flow/flutter_flow_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
@@ -58,7 +59,7 @@ class _AddCarsWidgetState extends State<AddCarsWidget> {
       safeSetState(() {
         _model.plateTextController?.text = FFAppState().myCar.plate;
       });
-        });
+    });
 
     _model.modelTextController ??= TextEditingController();
     _model.modelFocusNode ??= FocusNode();
@@ -589,10 +590,10 @@ class _AddCarsWidgetState extends State<AddCarsWidget> {
                                                     notes[notesIndex];
                                                 return Visibility(
                                                   visible: functions
-                                                              .getkeyfromjsonstring(
-                                                                  notesItem,
-                                                                  'message') !=
-                                                          '',
+                                                          .getkeyfromjsonstring(
+                                                              notesItem,
+                                                              'message') !=
+                                                      '',
                                                   child: Padding(
                                                     padding:
                                                         EdgeInsetsDirectional
@@ -683,17 +684,12 @@ class _AddCarsWidgetState extends State<AddCarsWidget> {
                                                                 }
                                                               }
                                                             },
-                                                            side: (FlutterFlowTheme.of(
-                                                                            context)
-                                                                        .alternate !=
-                                                                    null)
-                                                                ? BorderSide(
-                                                                    width: 2,
-                                                                    color: FlutterFlowTheme.of(
-                                                                            context)
-                                                                        .alternate,
-                                                                  )
-                                                                : null,
+                                                            side: BorderSide(
+                                                              width: 2,
+                                                              color: FlutterFlowTheme
+                                                                      .of(context)
+                                                                  .alternate,
+                                                            ),
                                                             activeColor:
                                                                 FlutterFlowTheme.of(
                                                                         context)
@@ -734,10 +730,10 @@ class _AddCarsWidgetState extends State<AddCarsWidget> {
                                                   final notesItem =
                                                       notes[notesIndex];
                                                   return functions
-                                                              .getkeyfromjsonstring(
-                                                                  notesItem,
-                                                                  'message') !=
-                                                          '';
+                                                          .getkeyfromjsonstring(
+                                                              notesItem,
+                                                              'message') !=
+                                                      '';
                                                 },
                                               ),
                                             );
@@ -828,17 +824,13 @@ class _AddCarsWidgetState extends State<AddCarsWidget> {
                                                           }
                                                         }
                                                       },
-                                                      side: (FlutterFlowTheme.of(
-                                                                      context)
-                                                                  .alternate !=
-                                                              null)
-                                                          ? BorderSide(
-                                                              width: 2,
-                                                              color: FlutterFlowTheme
-                                                                      .of(context)
-                                                                  .alternate,
-                                                            )
-                                                          : null,
+                                                      side: BorderSide(
+                                                        width: 2,
+                                                        color:
+                                                            FlutterFlowTheme.of(
+                                                                    context)
+                                                                .alternate,
+                                                      ),
                                                       activeColor:
                                                           FlutterFlowTheme.of(
                                                                   context)
@@ -1058,6 +1050,15 @@ class _AddCarsWidgetState extends State<AddCarsWidget> {
                           16.0, 12.0, 16.0, 12.0),
                       child: FFButtonWidget(
                         onPressed: () async {
+                          print('');
+                          print('╔══════════════════════════════════════════════════════════════');
+                          print('║ 🚗 ADD CARS - Button Pressed');
+                          print('╠══════════════════════════════════════════════════════════════');
+                          print('║ Plate: ${_model.plateTextController.text}');
+                          print('║ Model: ${_model.modelTextController.text}');
+                          print('║ Color: ${_model.colorTextController.text}');
+                          print('╚══════════════════════════════════════════════════════════════');
+                          print('');
                           if (_model.plateTextController.text.isNotEmpty &&
                               _model.modelTextController.text.isNotEmpty &&
                               _model.colorTextController.text.isNotEmpty) {
@@ -1065,19 +1066,43 @@ class _AddCarsWidgetState extends State<AddCarsWidget> {
                               final apiClient = ApiClient();
                               final newVehicle = VehicleCreation(
                                 vehicleMake: _model.modelTextController.text,
-                                vehicleModel: '', // Model is not separate in the form
+                                vehicleModel:
+                                    '', // Model is not separate in the form
                                 vehicleYear: '', // Year is not in the form
                                 licensePlate: _model.plateTextController.text,
                                 color: _model.colorTextController.text,
                               );
-                              final result = await apiClient.createVehicle(newVehicle);
-                              if (result.status.status == 'CREATED') {
-                                context.pushNamed(HomePageWidget.routeName);
+                              print('║ ➡️  Calling API: createVehicle...');
+                              final result =
+                                  await apiClient.createVehicle(newVehicle);
+                              print('');
+                              print('╔══════════════════════════════════════════════════════════════');
+                              print('║ ✅ ADD CARS - API Response');
+                              print('╠══════════════════════════════════════════════════════════════');
+                              print('║ Status: ${result.status.status}');
+                              print('║ Message: ${result.status.message}');
+                              print('╚══════════════════════════════════════════════════════════════');
+                              print('');
+                              if (result.status.result == 'CREATED' || result.status.status == 'VALID') {
+                                if (DemoConfig.isDemo) {
+                                  // In demo mode, also create a ticket so TicketWidget finds it
+                                  final vehicleId = result.data?['id'] ?? 'demo_vehicle_1';
+                                  await apiClient.createTicket(Ticket(
+                                    userClientId: 'demo_uid_001',
+                                    vehicleId: vehicleId,
+                                    status: 'Parked',
+                                    locationId: widget.id ?? 'loc_001',
+                                  ));
+                                  context.pushNamed(TicketWidget.routeName);
+                                } else {
+                                  context.pushNamed(HomePageWidget.routeName);
+                                }
                               } else {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(
-                                      result.status.message ?? 'Failed to create vehicle',
+                                      result.status.message ??
+                                          'Failed to create vehicle',
                                       style: TextStyle(
                                         color: FlutterFlowTheme.of(context)
                                             .primaryText,
@@ -1089,7 +1114,16 @@ class _AddCarsWidgetState extends State<AddCarsWidget> {
                                   ),
                                 );
                               }
-                            } catch (e) {
+                            } catch (e, stackTrace) {
+                              print('');
+                              print('╔══════════════════════════════════════════════════════════════');
+                              print('║ ❌ ADD CARS - ERROR');
+                              print('╠══════════════════════════════════════════════════════════════');
+                              print('║ Error: $e');
+                              print('╠══════════════════════════════════════════════════════════════');
+                              print('║ Stack: ${stackTrace.toString().split('\n').take(3).join('\n║ ')}');
+                              print('╚══════════════════════════════════════════════════════════════');
+                              print('');
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text(
@@ -1106,6 +1140,12 @@ class _AddCarsWidgetState extends State<AddCarsWidget> {
                               );
                             }
                           } else {
+                            print('');
+                            print('╔══════════════════════════════════════════════════════════════');
+                            print('║ ⚠️  ADD CARS - Validation Failed');
+                            print('║ Missing required fields (plate, model, or color)');
+                            print('╚══════════════════════════════════════════════════════════════');
+                            print('');
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: Text(

@@ -4,6 +4,8 @@ import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 
 import '../base_auth_user_provider.dart';
+import '/demo/demo_config.dart';
+import '/demo/demo_auth.dart';
 
 export '../base_auth_user_provider.dart';
 
@@ -27,7 +29,7 @@ class KnexFirebaseUser extends BaseAuthUser {
   @override
   Future? updateEmail(String email) async {
     try {
-      await user?.updateEmail(email);
+      await user?.verifyBeforeUpdateEmail(email);
     } catch (_) {
       await user?.verifyBeforeUpdateEmail(email);
     }
@@ -63,7 +65,13 @@ class KnexFirebaseUser extends BaseAuthUser {
   static BaseAuthUser fromFirebaseUser(User? user) => KnexFirebaseUser(user);
 }
 
-Stream<BaseAuthUser> knexFirebaseUserStream() => FirebaseAuth.instance
+Stream<BaseAuthUser> knexFirebaseUserStream() {
+  if (DemoConfig.isDemo) {
+    final demoUser = DemoAuthUser();
+    currentUser = demoUser;
+    return Stream.value(demoUser).asBroadcastStream();
+  }
+  return FirebaseAuth.instance
         .authStateChanges()
         .debounce((user) => user == null && !loggedIn
             ? TimerStream(true, const Duration(seconds: 1))
@@ -77,3 +85,4 @@ Stream<BaseAuthUser> knexFirebaseUserStream() => FirebaseAuth.instance
         return currentUser!;
       },
     );
+}

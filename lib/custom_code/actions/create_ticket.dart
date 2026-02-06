@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '/demo/demo_config.dart';
 
 // Logging levels with color coding
 enum LogLevel {
@@ -64,6 +65,21 @@ class TicketDataResponse {
 
 Future<String> createTicket(String firebaseUrl, String token, String site,
     String vehicleInfo, String mail, List<String> notes) async {
+  if (DemoConfig.isDemo) {
+    log(LogLevel.INFO, '[DEMO] createTicket intercepted');
+    await Future.delayed(const Duration(milliseconds: 300));
+    return jsonEncode(TicketDataResponse(
+      success: true,
+      message: 'Ticket created successfully',
+      data: {
+        'id': 'demo_ticket_${DateTime.now().millisecondsSinceEpoch}',
+        'PIN': '8842',
+        'status': 'Parked',
+        'siteId': site,
+      },
+      statusCode: 200,
+    ).toJson());
+  }
   log(LogLevel.INFO, 'Starting createTicket operation');
   try {
     // 1. Pre-computation and Validation

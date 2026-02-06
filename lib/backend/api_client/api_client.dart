@@ -2,9 +2,17 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '/backend/api_client/models/index.dart';
 import '/auth/firebase_auth/auth_util.dart';
+import '/demo/demo_config.dart';
+
+part 'mock_api_client.dart';
 
 class ApiClient {
-  ApiClient({this.baseUrl = 'https://client.knex-app.xyz/api'});
+  factory ApiClient({String baseUrl = 'https://client.knex-app.xyz/api'}) {
+    if (DemoConfig.isDemo) return MockApiClient._();
+    return ApiClient._real(baseUrl: baseUrl);
+  }
+
+  ApiClient._real({this.baseUrl = 'https://client.knex-app.xyz/api'});
 
   final String baseUrl;
 

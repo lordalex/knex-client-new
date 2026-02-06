@@ -1,10 +1,10 @@
 import '/backend/api_client/api_client.dart';
-import '/backend/api_client/models/index.dart';
+
 import '/auth/firebase_auth/auth_util.dart';
 import '/flutter_flow/flutter_flow_expanded_image_view.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/custom_code/actions/index.dart' as actions;
-import '/flutter_flow/custom_functions.dart' as functions;
+
 import '/index.dart';
 import 'package:ff_theme/flutter_flow/flutter_flow_theme.dart';
 import 'package:flutter/material.dart';
@@ -40,7 +40,8 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     // On page load action.
     SchedulerBinding.instance.addPostFrameCallback((_) async {
       try {
-        final response = await apiClient.searchUserClient({'email': currentUserEmail});
+        final response =
+            await apiClient.searchUserClient({'email': currentUserEmail});
         if (response.isNotEmpty) {
           final userProfile = response.first;
           _model.fullname = '${userProfile.firstName} ${userProfile.lastName}';
@@ -658,7 +659,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
                                                         ThemeMode.light);
                                                   }
                                                 },
-                                                activeColor:
+                                                activeThumbColor:
                                                     FlutterFlowTheme.of(context)
                                                         .info,
                                                 activeTrackColor:

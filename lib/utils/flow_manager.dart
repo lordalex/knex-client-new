@@ -1,12 +1,11 @@
 // Material import removed as unused
 // Provider/auth_util removed as unused (unless needed for checking token, but logic passes them in)
 import '/flutter_flow/flutter_flow_util.dart';
-import '/custom_code/actions/index.dart' as actions;
-import '/flutter_flow/custom_functions.dart' as functions;
-import '/app_constants.dart';
+
 import '/index.dart'; // For Widget imports like ProfileCreateWidget, TicketWidget
 import 'package:http/http.dart' as http; // Basic http for schema fetching
 import '/backend/api_client/api_client.dart';
+import '/demo/demo_config.dart';
 
 class FlowManager {
   // Singleton pattern for easy access if needed, though static methods might suffice.
@@ -26,6 +25,26 @@ class FlowManager {
   /// Fetches and caches the OpenAPI schema
   static Future<Map<String, dynamic>?> fetchSchema() async {
     if (_cachedSchema != null) return _cachedSchema;
+
+    if (DemoConfig.isDemo) {
+      _cachedSchema = {
+        'components': {
+          'schemas': {
+            'UserClientProfile': {
+              'required': ['firstName', 'lastName', 'phoneNumber', 'email'],
+              'properties': {
+                'firstName': {'type': 'string'},
+                'lastName': {'type': 'string'},
+                'phoneNumber': {'type': 'string'},
+                'email': {'type': 'string'},
+              },
+            },
+          },
+        },
+      };
+      print('[FlowManager] Demo mode: using hardcoded schema');
+      return _cachedSchema;
+    }
 
     try {
       print("🔍 [FlowManager] Fetching OpenAPI schema from defined URL...");
@@ -79,6 +98,9 @@ class FlowManager {
   /// Returns true if valid, false if missing required fields
   static Future<bool> validateProfileAgainstSchema(
       Map<String, dynamic> profileData) async {
+    print("🔍 [FlowManager] Profile data keys: ${profileData.keys.toList()}");
+    print("🔍 [FlowManager] Profile data: $profileData");
+
     await fetchSchema();
     final requiredFields = getRequiredFieldsFromSchema(_cachedSchema);
 
@@ -170,12 +192,10 @@ class FlowManager {
     final firstname = getString(['firstName', 'firstname']);
     final lastname = getString(['lastName', 'lastname']);
     final phone = getString(['phoneNumber', 'phone']);
-    final address = getString(['address']);
 
     bool isComplete = firstname.isNotEmpty &&
         lastname.isNotEmpty &&
-        phone.isNotEmpty &&
-        address.isNotEmpty; // Address was required in legacy
+        phone.isNotEmpty;
 
     if (!isComplete) return ProfileCreateWidget.routeName;
     return null;

@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '/utils/florida_messages.dart';
+import '/demo/demo_config.dart';
 
 // Logging levels with color coding
 enum LogLevel {
@@ -41,6 +42,27 @@ void log(LogLevel level, String message) {
 
 Future<String> sendjsontourl(
     String jsonString, String token, String baseUrl) async {
+  if (DemoConfig.isDemo) {
+    log(LogLevel.INFO, '[DEMO] sendjsontourl intercepted for $baseUrl');
+    await Future.delayed(const Duration(milliseconds: 200));
+    final lowerUrl = baseUrl.toLowerCase();
+    if (lowerUrl.contains('getpin') || lowerUrl.contains('createticket') || lowerUrl.contains('provisional')) {
+      return jsonEncode({'data': {'PIN': '8842'}});
+    }
+    if (lowerUrl.contains('searchuserclient') || lowerUrl.contains('searchuser')) {
+      return jsonEncode({
+        'data': [{
+          'id': 'demo_profile_001',
+          'uid': 'demo_uid_001',
+          'email': 'demo@knex-app.xyz',
+          'firstName': 'Alex',
+          'lastName': 'Sunshine',
+          'phoneNumber': '(305) 555-0123',
+        }]
+      });
+    }
+    return jsonEncode({'status': 'success', 'data': {}});
+  }
   log(LogLevel.INFO, 'Starting sendjsontourl function...');
 
   // 1. Pre-computation and Validation

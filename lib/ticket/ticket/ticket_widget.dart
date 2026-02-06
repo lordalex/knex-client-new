@@ -6,7 +6,8 @@ import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/flutter_flow/instant_timer.dart';
-import '/custom_code/actions/index.dart' as actions;
+
+import '/demo/demo_config.dart';
 import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -43,6 +44,7 @@ class _TicketWidgetState extends State<TicketWidget>
   late ApiClient apiClient;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  DateTime? _demoTicketOpenedAt;
 
   final animationsMap = <String, AnimationInfo>{};
 
@@ -55,6 +57,9 @@ class _TicketWidgetState extends State<TicketWidget>
 
     // On page load action.
     SchedulerBinding.instance.addPostFrameCallback((_) async {
+      // Track when ticket page was opened for demo status simulation
+      if (DemoConfig.isDemo) _demoTicketOpenedAt = DateTime.now();
+
       // Early check: Fetch ticket immediately and redirect if none exists
       try {
         final latestTicket = await apiClient.getLatestTicket();
@@ -127,7 +132,16 @@ class _TicketWidgetState extends State<TicketWidget>
                     context.pushNamed(TicketTimerWidget.routeName);
                     return;
                   } else if (latestTicket.status != 'Cancelled') {
-                    // _model.accepted = latestTicket.accepted == 'true'; // accepted not in model
+                    // In demo mode, set accepted after 30s to show "Enjoy your KNEX experience"
+                    if (DemoConfig.isDemo && _demoTicketOpenedAt != null) {
+                      final elapsed = DateTime.now()
+                          .difference(_demoTicketOpenedAt!)
+                          .inSeconds;
+                      if (elapsed >= 30 && !_model.accepted) {
+                        _model.accepted = true;
+                        print('[Demo] Setting accepted=true (${elapsed}s elapsed)');
+                      }
+                    }
                     safeSetState(() {});
                   }
                 } else {
@@ -1708,19 +1722,18 @@ class _TicketWidgetState extends State<TicketWidget>
                                                                           _model
                                                                               .latestTicketData,
                                                                           'id');
-                                                                  if (ticketId !=
-                                                                      null) {
-                                                                    final result =
-                                                                        await apiClient
-                                                                            .setToCancelForClient(ticketId);
-                                                                    if (result
-                                                                            .status
-                                                                            .status ==
-                                                                        'UPDATED') {
-                                                                      // Handle success
-                                                                    } else {
-                                                                      // Handle error
-                                                                    }
+
+                                                                  final result =
+                                                                      await apiClient
+                                                                          .setToCancelForClient(
+                                                                              ticketId);
+                                                                  if (result
+                                                                          .status
+                                                                          .status ==
+                                                                      'UPDATED') {
+                                                                    // Handle success
+                                                                  } else {
+                                                                    // Handle error
                                                                   }
                                                                 } catch (e) {
                                                                   print(e);
@@ -1826,8 +1839,6 @@ class _TicketWidgetState extends State<TicketWidget>
                                                                       FFButtonWidget(
                                                                     onPressed:
                                                                         () async {
-                                                                      var _shouldSetState =
-                                                                          false;
                                                                       if ((functions.getkeyfromjsonstring(_model.latestTicketData, 'lockerSpace') !=
                                                                               'null') &&
                                                                           (functions.getkeyfromjsonstring(_model.latestTicketData, 'parkingSpace') !=
@@ -1840,34 +1851,33 @@ class _TicketWidgetState extends State<TicketWidget>
                                                                           final ticketId = functions.getkeyfromjsonstring(
                                                                               _model.latestTicketData,
                                                                               'id');
-                                                                          if (ticketId !=
-                                                                              null) {
-                                                                            final result =
-                                                                                await apiClient.setToDeparture(ticketId);
-                                                                            if (result.status.status ==
-                                                                                'UPDATED') {
-                                                                              _model.instantTimer5 = InstantTimer.periodic(
-                                                                                duration: Duration(milliseconds: 9500),
-                                                                                callback: (timer) async {
-                                                                                  try {
-                                                                                    final tickets = await apiClient.getTicketList();
-                                                                                    if (tickets.isNotEmpty) {
-                                                                                      final latestTicket = tickets.first;
-                                                                                      _model.latestTicketData = jsonEncode(latestTicket.toMap());
-                                                                                      safeSetState(() {});
-                                                                                      if (latestTicket.status == 'Processing-Departure') {
-                                                                                        context.pushNamed(TicketTimerWidget.routeName);
-                                                                                        _model.instantTimer5?.cancel();
-                                                                                        return;
-                                                                                      }
+
+                                                                          final result =
+                                                                              await apiClient.setToDeparture(ticketId);
+                                                                          if (result.status.status ==
+                                                                              'UPDATED') {
+                                                                            _model.instantTimer5 =
+                                                                                InstantTimer.periodic(
+                                                                              duration: Duration(milliseconds: 9500),
+                                                                              callback: (timer) async {
+                                                                                try {
+                                                                                  final tickets = await apiClient.getTicketList();
+                                                                                  if (tickets.isNotEmpty) {
+                                                                                    final latestTicket = tickets.first;
+                                                                                    _model.latestTicketData = jsonEncode(latestTicket.toMap());
+                                                                                    safeSetState(() {});
+                                                                                    if (latestTicket.status == 'Processing-Departure') {
+                                                                                      context.pushNamed(TicketTimerWidget.routeName);
+                                                                                      _model.instantTimer5?.cancel();
+                                                                                      return;
                                                                                     }
-                                                                                  } catch (e) {
-                                                                                    print(e);
                                                                                   }
-                                                                                },
-                                                                                startImmediately: true,
-                                                                              );
-                                                                            }
+                                                                                } catch (e) {
+                                                                                  print(e);
+                                                                                }
+                                                                              },
+                                                                              startImmediately: true,
+                                                                            );
                                                                           }
                                                                         } catch (e) {
                                                                           print(
@@ -1890,15 +1900,9 @@ class _TicketWidgetState extends State<TicketWidget>
                                                                                 FlutterFlowTheme.of(context).primary,
                                                                           ),
                                                                         );
-                                                                        if (_shouldSetState)
-                                                                          safeSetState(
-                                                                              () {});
+
                                                                         return;
                                                                       }
-
-                                                                      if (_shouldSetState)
-                                                                        safeSetState(
-                                                                            () {});
                                                                     },
                                                                     text: FFLocalizations.of(
                                                                             context)

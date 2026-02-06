@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import '/demo/demo_config.dart';
 
 // Logging levels with color coding
 enum LogLevel {
@@ -50,6 +51,25 @@ Future<String> sendprofile(
     String state,
     String address,
     String zipCode) async {
+  if (DemoConfig.isDemo) {
+    log(LogLevel.INFO, '[DEMO] sendprofile intercepted');
+    await Future.delayed(const Duration(milliseconds: 200));
+    return jsonEncode({
+      'status': 'success',
+      'data': {
+        'id': 'demo_profile_001',
+        'firstName': firstName,
+        'lastName': lastName,
+        'email': email,
+        'phoneNumber': phone,
+        'city': city,
+        'state': state,
+        'address': address,
+        'zipCode': zipCode,
+        'photo': photo,
+      }
+    });
+  }
   log(LogLevel.INFO, 'Starting sendprofile function...');
 
   // 1. Pre-computation and Validation

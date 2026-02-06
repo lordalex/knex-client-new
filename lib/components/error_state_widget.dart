@@ -52,10 +52,10 @@ class ErrorStateWidget extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: FlutterFlowTheme.of(context).error.withOpacity(0.1),
+        color: FlutterFlowTheme.of(context).error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: FlutterFlowTheme.of(context).error.withOpacity(0.3),
+          color: FlutterFlowTheme.of(context).error.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -118,7 +118,8 @@ class ErrorStateWidget extends StatelessWidget {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: FlutterFlowTheme.of(context).error.withOpacity(0.1),
+                  color:
+                      FlutterFlowTheme.of(context).error.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(

@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../auth_manager.dart';
 import '/utils/florida_messages.dart';
+import '/demo/demo_config.dart';
+import '/demo/demo_auth.dart';
 
 import 'anonymous_auth.dart';
 import 'apple_auth.dart';
@@ -49,13 +51,12 @@ class FirebaseAuthManager extends AuthManager
         GithubSignInManager,
         PhoneSignInManager {
   // Set when using phone verification (after phone number is provided).
-  String? _phoneAuthVerificationCode;
-  // Set when using phone sign in in web mode (ignored otherwise).
-  ConfirmationResult? _webPhoneAuthConfirmationResult;
+
   FirebasePhoneAuthManager phoneAuthManager = FirebasePhoneAuthManager();
 
   @override
   Future signOut() {
+    if (DemoConfig.isDemo) return Future.value();
     return FirebaseAuth.instance.signOut();
   }
 
@@ -71,8 +72,7 @@ class FirebaseAuthManager extends AuthManager
       if (e.code == 'requires-recent-login') {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(FloridaMessages.signInRequired(context))),
+          SnackBar(content: Text(FloridaMessages.signInRequired(context))),
         );
       }
     }
@@ -93,14 +93,12 @@ class FirebaseAuthManager extends AuthManager
       if (e.code == 'requires-recent-login') {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(FloridaMessages.signInRequired(context))),
+          SnackBar(content: Text(FloridaMessages.signInRequired(context))),
         );
       }
     }
   }
 
-  @override
   Future updatePassword({
     required String newPassword,
     required BuildContext context,
@@ -298,6 +296,7 @@ class FirebaseAuthManager extends AuthManager
     Future<UserCredential?> Function() signInFunc,
     String authProvider,
   ) async {
+    if (DemoConfig.isDemo) return DemoAuthUser();
     try {
       final userCredential = await signInFunc();
       return userCredential == null
@@ -306,7 +305,8 @@ class FirebaseAuthManager extends AuthManager
     } on FirebaseAuthException catch (e) {
       final errorMsg = switch (e.code) {
         'email-already-in-use' => FloridaMessages.emailAlreadyInUse(context),
-        'INVALID_LOGIN_CREDENTIALS' => FloridaMessages.invalidCredentials(context),
+        'INVALID_LOGIN_CREDENTIALS' =>
+          FloridaMessages.invalidCredentials(context),
         _ => FloridaMessages.genericError(context),
       };
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
